@@ -1,16 +1,68 @@
 ---
-import Head from "../components/Head.astro";
-import { SITE_TITLE, SITE_DESCRIPTION } from "../constants";
+import Layout from "../layouts/Layout.astro";
+import SocialLink from "../components/SocialLink.astro";
+import { SITE_DESCRIPTION } from "../constants";
+import { allBlogPosts } from "../lib/posts";
+import Link from "../components/Link.astro";
+import BlogPost from "../components/BlogPost.astro";
+
+const socials = [
+    {
+        href: "https://github.com/chornonoh-vova",
+        icon: "github",
+        name: "GitHub",
+    },
+    {
+        href: "https://www.linkedin.com/in/volodymyr-chornonoh/",
+        icon: "linkedin",
+        name: "LinkedIn",
+    },
+];
+
+const recentBlogs = (await allBlogPosts()).slice(0, 3);
 ---
 
-<!doctype html>
-<html lang="en">
-    <head>
-        <Head title={SITE_TITLE} description={SITE_DESCRIPTION} />
-    </head>
-    <body>
-        <main>
-            <h1>Hi, My name is Volodymyr Chornonoh 👋🏻</h1>
-        </main>
-    </body>
-</html>
+<Layout title="Home" description={SITE_DESCRIPTION}>
+    <section id="about" class="flex flex-col gap-4">
+        <h1 class="font-semibold">Hi, My name is Volodymyr Chornonoh 👋🏻</h1>
+
+        <p>
+            I'm a full-stack software engineer, focused on building for the web.
+            Currently living in Ukraine 🇺🇦. I'm always thrilled to learn
+            something new, so I've created this website to share interesting and
+            insightful things that I encounter. Welcome to my corner of the
+            internet!
+        </p>
+    </section>
+
+    <section id="socials" class="flex flex-col gap-4">
+        <h2 class="font-semibold">My Socials</h2>
+
+        <div class="flex flex-wrap gap-2">
+            {
+                socials.map(({ href, icon, name }) => (
+                    <SocialLink href={href} icon={icon}>
+                        {name}
+                    </SocialLink>
+                ))
+            }
+        </div>
+    </section>
+
+    <section id="blog" class="flex flex-col gap-4">
+        <div class="flex flex-wrap gap-2 items-center justify-between">
+            <h2 class="font-semibold">Recent blog posts</h2>
+            <Link href="/blog" underline>See all blog posts</Link>
+        </div>
+
+        <ul class="flex flex-col gap-2">
+            {
+                recentBlogs.map((post) => (
+                    <li>
+                        <BlogPost entry={post} />
+                    </li>
+                ))
+            }
+        </ul>
+    </section>
+</Layout>
