@@ -1,0 +1,170 @@
+---
+title: Better approach to automated UI testing
+description: Utilizing data-testid attributes to simplify automation
+date: 2025-05-10
+---
+
+# {frontmatter.title}
+
+> The Only Constant in Life Is Change. - Heraclitus
+
+Recently, I’ve stumbled upon a challenge in my day-to-day work as a frontend developer: it’s constantly changing UI. How is the one supposed to maintain the high quality of the code in such rapidly changing conditions? The answer is simple - automated tests.
+
+Unfortunately, when the underlying interface changes in both content and structure, I had to rewrite a lot of tests as well. This led to some nasty bugs, and missing flows. I couldn’t iterate on the reworks quite as confidently because I knew for a fact that the changes that I introduce will lead to failing tests. After that, I couldn’t separate genuinely broken tests that indicated some bugs or tests that needed rewriting. In my opinion, this defeats the whole purpose of the testing in the first place. Furthermore, the QA team can’t reliably write automated tests for the UI, because one day the elements can be in one place but the next day, in another place.
+
+So I set out to find a solution for this problem: how could I write my most important tests in a way that even later changes wouldn’t affect them?
+
+And I think I’ve found a possible solution.
+
+## Example case
+
+Let’s write a simple CRUD app and then test it. The application will consist of a single screen, and let the users see all of the music tracks in a list view with pagination. There will also be some actions available: create a new track, edit existing ones, upload some music files to them, listen to the music in a mini player, and delete tracks.
+
+To build this application, I’ve used [React](https://react.dev/) and [TailwindCSS](https://tailwindcss.com/) for the UI, [shadcn/ui](https://ui.shadcn.com/) components, and [TanStack Query](http://tanstack.com/query/latest) for data fetching.
+
+I had a lot of fun writing it! You can look at the source code for the entire application [here](https://github.com/chornonoh-vova/track-manager).
+
+There’s a lot of testing ground to cover in one blog post, so I want to focus on one particular user flow: creating a new track. I think that this flow covers a lot of blockers that I’ve encountered, and would have led to many test rewrites with the old approach.
+
+There’s the flow that I want to focus on in this blog post:
+
+1. The user clicks the “Create a new track” button
+2. The modal with a form to fill out the track metadata is opened
+3. The user clicks “Save” without filling any fields
+4. Fields, that are required (such as the name of the track) show an error
+
+## Let's write some tests
+
+Let’s start with the first test case. We need to get the “Create Track” button, click it, and make sure that the page contains the dialog with the title “Create a Track”.
+
+```ts
+it("opens a create track modal", async () => {
+  renderPage();
+
+  await expect
+    .element(page.getByRole("button", { name: "Create Track" }))
+    .toBeInTheDocument();
+
+  await page.getByRole("button", { name: "Create Track" }).click();
+
+  await expect
+    .element(page.getByRole("dialog", { name: "Create a Track" }))
+    .toBeInTheDocument();
+});
+```
+
+This is a good approach to testing - we are ensuring the business logic by interacting with elements that users see. This test is using Playwright’s [getByRole](https://playwright.dev/docs/locators#locate-by-role) locator. This way, we are also ensuring the accessible roles and names for elements along the way, which is great for a11y testing. But there are a couple of problems with this approach:
+
+- What if the text for a button changes?
+- What if the text for the dialog title changes?
+- What if we need to automatically test an application in a different language?
+  All of these changes (and they are quite common) will lead to failing tests on the slightest change, and these tests cannot be used in automation scenarios.
+
+Let’s move on to a second case. In this test case, we are also clicking the “Create Track” button, and then immediately “Save” button and verifying that required fields have errors.
+
+```ts
+it("should show errors when required fields are not filled", async () => {
+  renderPage();
+
+  await page.getByRole("button", { name: "Create Track" }).click();
+
+  await page.getByRole("button", { name: "Save" }).click();
+
+  await expect
+    .element(page.getByText("Track title is required"))
+    .toBeInTheDocument();
+
+  await expect
+    .element(page.getByText("Track artist is required"))
+    .toBeInTheDocument();
+});
+```
+
+Here I’ve used another Playwright locator: [getByText](https://playwright.dev/docs/locators#locate-by-text). I’d argue that this locator is even more brittle than previous ones that I’ve used.
+
+Obviously, this locator has the same problems, that we discussed before, so I decided to take a step back and research a little about what can be used instead. I stumbled upon this locator in the Playwright docs: [getByTestId](https://playwright.dev/docs/locators#locate-by-test-id). The [Testing Library](https://testing-library.com/) has a similar solution exactly for that: [getByTestId](https://testing-library.com/docs/queries/bytestid).
+
+## Refactor time
+
+Let’s try applying idea this to our application.
+
+Firstly, we’ll need to add `data-testid` attributes to the elements that we are interested in.
+
+1. Create track button
+
+```tsx
+<Button data-testid="create-track-button">
+  <Plus />
+  Create Track
+</Button>
+```
+
+2. Track form
+
+```tsx
+<form
+  data-testid="track-form"
+  onSubmit={form.handleSubmit(onSubmit)}
+  className="space-y-8"
+></form>
+```
+
+3. Save button
+
+```tsx
+<LoadingButton isLoading={isPending} data-testid="submit-button" type="submit">
+  Save
+</LoadingButton>
+```
+
+4. Form error messages
+
+```tsx
+<FormMessage data-testid="error-title" />
+<FormMessage data-testid="error-artist" />
+```
+
+After these changes, tests for the flow can be updated like this:
+
+```ts
+it("opens a create track modal", async () => {
+  renderPage();
+
+  await expect
+    .element(page.getByTestId("create-track-button"))
+    .toBeInTheDocument();
+
+  await page.getByTestId("create-track-button").click();
+
+  await expect.element(page.getByTestId("track-form")).toBeInTheDocument();
+});
+
+it("should show errors when required fields are not filled", async () => {
+  renderPage();
+
+  await page.getByTestId("create-track-button").click();
+
+  await page.getByTestId("submit-button").click();
+
+  await expect.element(page.getByTestId("error-title")).toBeInTheDocument();
+
+  await expect.element(page.getByTestId("error-artist")).toBeInTheDocument();
+});
+```
+
+That’s looking much better! I think it solves all of the problems that I’ve highlighted in the first approach:
+
+- It doesn’t matter what the text of the buttons are. We will still reliably select those buttons (given that they weren’t removed entirely 😅)
+- We are not depending on the dialog title anymore, we are just getting the form directly.
+- We are not depending on the text of the validation errors. We are only testing that they appear after validation.
+- We can even run the same set of tests in different languages! Because no matter the language, our business logic stays the same.
+
+But this approach has some downsides as well:
+
+- We are no longer asserting the accessible roles of the elements that we are selecting. For example, the element `create-track-button` could be anything, like div, with an `onClick` attached to it.
+- We are no longer asserting what these validation errors are, they could be entirely different from what we are expecting to see.
+- Both Playwright and Testing Library docs advise against using this technique. It should be our last resort, it should only be used when all other methods are not working.
+
+## Conclusion
+
+`data-testid` attributes are not a silver bullet to solve all of my problems with UI tests. But when used wisely, they can help solve the problem of automating a large number of user flows that need to be performed. I think that I’ll be using this technique more in my work.

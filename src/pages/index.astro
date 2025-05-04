@@ -5,19 +5,8 @@ import { SITE_DESCRIPTION } from "../constants";
 import { allBlogPosts } from "../lib/posts";
 import Link from "../components/Link.astro";
 import BlogPost from "../components/BlogPost.astro";
-
-const socials = [
-    {
-        href: "https://github.com/chornonoh-vova",
-        icon: "github",
-        name: "GitHub",
-    },
-    {
-        href: "https://www.linkedin.com/in/volodymyr-chornonoh/",
-        icon: "linkedin",
-        name: "LinkedIn",
-    },
-];
+import GitHub from "../assets/icons/github.svg";
+import LinkedIn from "../assets/icons/linkedin.svg";
 
 const recentBlogs = (await allBlogPosts()).slice(0, 3);
 ---
@@ -39,13 +28,14 @@ const recentBlogs = (await allBlogPosts()).slice(0, 3);
         <h2 class="font-semibold">My Socials</h2>
 
         <div class="flex flex-wrap gap-2">
-            {
-                socials.map(({ href, icon, name }) => (
-                    <SocialLink href={href} icon={icon}>
-                        {name}
-                    </SocialLink>
-                ))
-            }
+            <SocialLink href="https://github.com/chornonoh-vova">
+                <GitHub width={18} />
+                GitHub
+            </SocialLink>
+            <SocialLink href="https://www.linkedin.com/in/volodymyr-chornonoh/">
+                <LinkedIn width={18} />
+                LinkedIn
+            </SocialLink>
         </div>
     </section>
 
