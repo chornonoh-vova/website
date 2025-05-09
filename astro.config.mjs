@@ -5,10 +5,10 @@ import { defineConfig } from "astro/config";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 
-// https://astro.build/config
-export default defineConfig({
-  site: "https://chornonoh-vova.dev",
+import vercel from "@astrojs/vercel";
 
+export default defineConfig({
+  site: "https://chornonoh-vova.com",
   prefetch: true,
 
   vite: {
@@ -34,4 +34,6 @@ export default defineConfig({
     }),
     sitemap(),
   ],
+
+  adapter: vercel(),
 });
