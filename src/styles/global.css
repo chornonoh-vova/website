@@ -5,6 +5,8 @@
     --font-body: Inter, sans-serif;
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 html,
 body {
     @apply size-full;

@@ -1,12 +1,13 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import SocialLink from "../components/SocialLink.astro";
+import IconLink from "../components/IconLink.astro";
 import { SITE_DESCRIPTION } from "../constants";
 import { allBlogPosts } from "../lib/posts";
 import Link from "../components/Link.astro";
 import BlogPost from "../components/BlogPost.astro";
 import GitHub from "../assets/icons/github.svg";
 import LinkedIn from "../assets/icons/linkedin.svg";
+import Rss from "../assets/icons/rss.svg";
 
 const recentBlogs = (await allBlogPosts()).slice(0, 3);
 ---
@@ -25,17 +26,21 @@ const recentBlogs = (await allBlogPosts()).slice(0, 3);
     </section>
 
     <section id="socials" class="flex flex-col gap-4">
-        <h2 class="font-semibold">My Socials</h2>
+        <h2 class="font-semibold">My Links</h2>
 
         <div class="flex flex-wrap gap-2">
-            <SocialLink href="https://github.com/chornonoh-vova">
+            <IconLink href="https://github.com/chornonoh-vova">
                 <GitHub width={18} />
                 GitHub
-            </SocialLink>
-            <SocialLink href="https://www.linkedin.com/in/volodymyr-chornonoh/">
+            </IconLink>
+            <IconLink href="https://www.linkedin.com/in/volodymyr-chornonoh/">
                 <LinkedIn width={18} />
                 LinkedIn
-            </SocialLink>
+            </IconLink>
+            <IconLink href={new URL("rss.xml", Astro.site)}>
+                <Rss width={18} class="stroke-orange-600" />
+                RSS
+            </IconLink>
         </div>
     </section>
 

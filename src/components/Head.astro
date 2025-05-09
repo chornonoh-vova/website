@@ -18,7 +18,41 @@ const pageTitle = `${title} | ${SITE_TITLE}`;
 <meta name="viewport" content="width=device-width" />
 <meta name="generator" content={Astro.generator} />
 
+<!-- Canonical URL -->
+<link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+
+<!-- Sitemap -->
+<link rel="sitemap" href="/sitemap-index.xml" />
+
+<!-- RSS auto-discovery -->
+<link
+    rel="alternate"
+    type="application/rss+xml"
+    title={SITE_TITLE}
+    href={new URL("rss.xml", Astro.site)}
+/>
+
 <!-- Primary Meta Tags -->
 <title>{pageTitle}</title>
 <meta name="title" content={pageTitle} />
 <meta name="description" content={description} />
+
+<script is:inline>
+    document.documentElement.classList.toggle(
+        "dark",
+        localStorage.theme === "dark" ||
+            (!("theme" in localStorage) &&
+                window.matchMedia("(prefers-color-scheme: dark)").matches),
+    );
+
+    window
+        .matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", (event) => {
+            if (!("theme" in localStorage)) {
+                document.documentElement.classList.toggle(
+                    "dark",
+                    event.matches,
+                );
+            }
+        });
+</script>

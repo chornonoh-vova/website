@@ -3,12 +3,14 @@ title: Better approach to automated UI testing
 description: Utilizing data-testid attributes to simplify automation
 date: 2025-05-10
 ---
-
-# {frontmatter.title}
+import { Image } from "astro:assets";
+import mainPage from "../../assets/images/track-manager-main-page.png";
+import modalInitial from "../../assets/images/track-manager-modal-initial.png";
+import modalError from "../../assets/images/track-manager-modal-error.png";
 
 > The Only Constant in Life Is Change. - Heraclitus
 
-Recently, I’ve stumbled upon a challenge in my day-to-day work as a frontend developer: it’s constantly changing UI. How is the one supposed to maintain the high quality of the code in such rapidly changing conditions? The answer is simple - automated tests.
+Recently, I’ve stumbled upon a challenge in my day-to-day work as a frontend developer: it’s constantly changing UI. To be honest, that's not the first time when I encounter changing requirements, but what makes it hard this time is the need for automation.
 
 Unfortunately, when the underlying interface changes in both content and structure, I had to rewrite a lot of tests as well. This led to some nasty bugs, and missing flows. I couldn’t iterate on the reworks quite as confidently because I knew for a fact that the changes that I introduce will lead to failing tests. After that, I couldn’t separate genuinely broken tests that indicated some bugs or tests that needed rewriting. In my opinion, this defeats the whole purpose of the testing in the first place. Furthermore, the QA team can’t reliably write automated tests for the UI, because one day the elements can be in one place but the next day, in another place.
 
@@ -19,6 +21,10 @@ And I think I’ve found a possible solution.
 ## Example case
 
 Let’s write a simple CRUD app and then test it. The application will consist of a single screen, and let the users see all of the music tracks in a list view with pagination. There will also be some actions available: create a new track, edit existing ones, upload some music files to them, listen to the music in a mini player, and delete tracks.
+
+Here is how the main page looks like:
+
+<Image src={mainPage} alt="Screenshot of main page of example 'Track Manager' application." />
 
 To build this application, I’ve used [React](https://react.dev/) and [TailwindCSS](https://tailwindcss.com/) for the UI, [shadcn/ui](https://ui.shadcn.com/) components, and [TanStack Query](http://tanstack.com/query/latest) for data fetching.
 
@@ -32,6 +38,14 @@ There’s the flow that I want to focus on in this blog post:
 2. The modal with a form to fill out the track metadata is opened
 3. The user clicks “Save” without filling any fields
 4. Fields, that are required (such as the name of the track) show an error
+
+Here is how modal looks like initially:
+
+<Image src={modalInitial} alt="Screenshot of create track modal" />
+
+Here is how modal looks like with errors:
+
+<Image src={modalError} alt="Screenshot of create track modal with errors on the fields" />
 
 ## Let's write some tests
 
