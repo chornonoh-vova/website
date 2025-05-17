@@ -2,7 +2,7 @@
 import { type CollectionEntry } from "astro:content";
 import { allBlogPosts } from "../../lib/posts";
 import Layout from "../../layouts/Layout.astro";
-import BlogPost from "../../components/BlogPost.astro";
+import PostCard from "../../components/PostCard.astro";
 
 const allPosts = await allBlogPosts();
 
@@ -45,7 +45,7 @@ const years = Object.keys(postsByYear).sort(
                 <ul class="flex flex-col gap-2">
                     {postsByYear[year].map((post) => (
                         <li>
-                            <BlogPost entry={post} />
+                            <PostCard entry={post} />
                         </li>
                     ))}
                 </ul>

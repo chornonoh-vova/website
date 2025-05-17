@@ -10,14 +10,22 @@
   },
   "dependencies": {
     "@astrojs/mdx": "^4.2.6",
+    "@astrojs/react": "^4.2.7",
     "@astrojs/rss": "^4.0.11",
-    "@astrojs/sitemap": "^3.3.1",
+    "@astrojs/sitemap": "^3.4.0",
     "@astrojs/vercel": "^8.1.4",
+    "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
-    "@tailwindcss/vite": "^4.1.6",
-    "astro": "^5.7.12",
+    "@tailwindcss/vite": "^4.1.7",
+    "@types/react": "^19.1.4",
+    "@types/react-dom": "^19.1.5",
+    "astro": "^5.7.13",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^3.2.0",
-    "tailwindcss": "^4.1.6"
+    "lucide-react": "^0.511.0",
+    "motion": "^12.12.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwind-merge": "^3.3.0",
+    "tailwindcss": "^4.1.7"
   }
 }

@@ -5,6 +5,7 @@ import { allBlogPosts } from "../../lib/posts";
 import Prose from "../../components/Prose.astro";
 import Layout from "../../layouts/Layout.astro";
 import FormattedDate from "../../components/FormattedDate.astro";
+import PostComments from "../../components/PostComments.astro";
 
 export const getStaticPaths = (async () => {
     const allPosts = await allBlogPosts();
@@ -28,4 +29,6 @@ const { Content } = await render(post);
         <FormattedDate date={post.data.date} />
         <Content />
     </Prose>
+
+    <PostComments />
 </Layout>
