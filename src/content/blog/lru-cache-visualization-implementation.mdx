@@ -1,0 +1,183 @@
+---
+title: "LRU Cache: visualization & implementation"
+description: What is LRU cache, hot to build it, and some visualizations for better understanding
+date: 2025-05-17
+---
+
+import { LRUVisualization } from "../../components/LRUVisualization";
+
+I’ve recently completed an [Algorithms in Practice course](https://www.csosvita.com/courses/algorithms-in-practice). One of the most practical and interesting topics were caches. I got interested in that topic, so I’ve decided to build one of the data structures that we discussed - the LRU (least recently used) cache and write a blog post about it. I’ve also built a visualization so it will be easier for anyone to understand.
+
+## Cache
+
+Let’s start from the beginning- what is cache? Turns out it is pretty simple - it’s some kind of storage (hardware or software) the whole purpose of which is to store data that can be used in the future. The whole idea of cache is that it’s faster than the main source of data.
+
+Some examples include:
+
+- L1 cache in CPUs is faster than RAM
+- reads from the Redis cache are faster than reads from the PostgreSQL database
+
+## Hits, misses, and eviction
+
+Caches are not infinite, though, because faster memory is pricier, and we cannot fit the whole database in memory. Therefore, caches typically contain only the subset of all keys. When the key that is being requested is found in a cache, it’s called a “cache hit”. When the key is absent from a cache, it’s called a “cache miss”.
+
+Using a cache wisely is to find a balance between the number of hits and misses. Generally, the more hits - the better.
+
+Caches have some capacity, and when it’s exceeded, caches need to remove some entries that are no longer (hopefully) needed. The process of automatic removal is called “eviction policy”.
+
+That’s where LRU (Least Recently Used) comes in - it’s one of the simplest cache eviction policies. The main idea is to remove an entry that was used least recently.
+
+## Visualization
+
+Let’s now look at how the LRU cache works under the hood. In this section, you’ll see interactive examples, that you can play around with. There are two sections in each example: controls and state. Controls allow you to interact with a cache as an interface (get and set operations). There is also a reset button that restores initial state of the cache. The state section shows a representation of data that is stored inside the cache. New entries are added at the top, and the least recent are at the bottom. Caches have a capacity of 6.
+
+### Cache hit
+
+Try to enter 3 into the "Key to get" field below, and clicking "Get" button. Observe how entry with key = 3 moves to the top, as it becomes most recently used. Also note, that number of hits increases in the cache stats. Now, try entering other keys, that are available in the cache, and observing how the state of the cache changes with every request.
+
+<LRUVisualization
+  client:load
+  initial={[
+    ["1", "apple 🍎"],
+    ["2", "banana 🍌"],
+    ["3", "pineapple 🍍"],
+    ["4", "pear 🍐"],
+    ["5", "peach 🍑"],
+  ]}
+  getControl
+  resetControl
+/>
+
+**Bonus question**
+
+> What should be the order of requests so the cache entries would be in the order 1 -> 2 -> 3 -> 4 -> 5 ?
+
+### Cache miss
+
+Now, try to enter the key that doesn't exist in the cache, for example, 6. You can observe cache miss being logged and number of misses increasing. Most importantly, though, cache state shouldn't have changed at all.
+
+<LRUVisualization
+  client:load
+  initial={[
+    ["1", "apple 🍎"],
+    ["2", "banana 🍌"],
+    ["3", "pineapple 🍍"],
+    ["4", "pear 🍐"],
+    ["5", "peach 🍑"],
+  ]}
+  getControl
+  resetControl
+/>
+
+### Cache eviction
+
+Now, try adding a new entry into the cache, for example with key **6** and value **lemon 🍋**. And this item will be added no problem. But try to add one more item, for example, **7**: **cherries 🍒**. You can observe how the least recent entry (apple) gets evicted from the cache, to make space for the new items (because in this visualization maximum capacity is 6).
+
+<LRUVisualization
+  client:load
+  initial={[
+    ["1", "apple 🍎"],
+    ["2", "banana 🍌"],
+    ["3", "pineapple 🍍"],
+    ["4", "pear 🍐"],
+    ["5", "peach 🍑"],
+  ]}
+  getControl={false}
+  setControl
+  resetControl
+/>
+
+### Playground
+
+Here is a full interactive playground, with an additional buttons to remove entries from the cache.
+
+<LRUVisualization
+  client:load
+  initial={[
+    ["1", "apple 🍎"],
+    ["2", "banana 🍌"],
+    ["3", "pineapple 🍍"],
+    ["4", "pear 🍐"],
+    ["5", "peach 🍑"],
+  ]}
+  getControl
+  setControl
+  deleteControl
+  resetControl
+/>
+
+## Implementation
+
+Let’s now take a look at how we can implement it in JS/TS. Credit to this [tweet](https://x.com/dillon_mulroy/status/1920510178002186449) that inspired me to write this article. I took this implementation as a base and added some additional methods for my visualizations.
+
+The main idea comes from the fact that the built-in Map object in JS preserves an insertion order of the keys: [Map - JavaScript | MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map#:~:text=The%20Map%20object%20holds%20key%2Dvalue%20pairs%20and%20remembers%20the%20original%20insertion%20order%20of%20the%20keys.)
+And here is the V8 source code that I’ve found that implements an ordered hash map:[v8/src/objects/ordered-hash-table.h at main · v8/v8 · GitHub](https://github.com/v8/v8/blob/main/src/objects/ordered-hash-table.h)
+
+The get method is really simple: we need to take a look into the underlying map and move the requested key to be most recent when it was found.
+
+The set method needs to handle the capacity, to make sure that our underlying map doesn’t grow too much.
+
+I’ve also added the entries method, which just returns an array of key/value pairs. I use this method to show the internal state of a cache in all visualizations.
+
+Here is a full code for the LRUCache class:
+
+```ts
+export class LRUCache<K, V> {
+  #cache: Map<K, V>;
+  #capacity: number;
+
+  constructor(capacity: number, initial?: Iterable<readonly [K, V]>) {
+    this.#cache = new Map(initial);
+    this.#capacity = capacity;
+  }
+
+  #setMostRecent(key: K, value: V): void {
+    this.#cache.delete(key);
+    this.#cache.set(key, value);
+  }
+
+  entries(): [K, V][] {
+    const entries: [K, V][] = new Array(this.#cache.size);
+    let idx = entries.length - 1;
+    for (const entry of this.#cache.entries()) {
+      entries[idx] = entry;
+      idx--;
+    }
+    return entries;
+  }
+
+  get(key: K): V | undefined {
+    const value = this.#cache.get(key);
+
+    if (value === undefined) {
+      return undefined;
+    }
+
+    this.#setMostRecent(key, value);
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    this.#setMostRecent(key, value);
+
+    if (this.#cache.size > this.#capacity) {
+      const oldest = this.#cache.keys().next().value!;
+      this.#cache.delete(oldest);
+    }
+  }
+
+  delete(key: K): void {
+    this.#cache.delete(key);
+  }
+
+  clear(): void {
+    this.#cache.clear();
+  }
+}
+```
+
+The main difference from the tweet that I linked above is that I’ve used JS private properties instead of TS private modifier, but why I did so, is a topic for some post in the future, so stay tuned 😉
+
+As you can see, this idea is pretty simple to implement, and I find that the visuals for it are stunning. With this newfound knowledge, I encourage you to practice this technique on leetcode: [LRU Cache - LeetCode](https://leetcode.com/problems/lru-cache/). Something that I found about myself, is that I’m learning better in practice.
+
+Thank you for reading this article, I hope that it was interesting and insightful for you. You can leave comments/suggestions in the form below. See you in the next post!

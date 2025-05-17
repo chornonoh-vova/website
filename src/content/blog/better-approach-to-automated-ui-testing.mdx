@@ -3,6 +3,7 @@ title: Better approach to automated UI testing
 description: Utilizing data-testid attributes to simplify automation
 date: 2025-05-10
 ---
+
 import { Image } from "astro:assets";
 import mainPage from "../../assets/images/track-manager-main-page.png";
 import modalInitial from "../../assets/images/track-manager-modal-initial.png";
@@ -24,7 +25,10 @@ Let’s write a simple CRUD app and then test it. The application will consist o
 
 Here is how the main page looks like:
 
-<Image src={mainPage} alt="Screenshot of main page of example 'Track Manager' application." />
+<Image
+  src={mainPage}
+  alt="Screenshot of main page of example 'Track Manager' application."
+/>
 
 To build this application, I’ve used [React](https://react.dev/) and [TailwindCSS](https://tailwindcss.com/) for the UI, [shadcn/ui](https://ui.shadcn.com/) components, and [TanStack Query](http://tanstack.com/query/latest) for data fetching.
 
@@ -45,7 +49,10 @@ Here is how modal looks like initially:
 
 Here is how modal looks like with errors:
 
-<Image src={modalError} alt="Screenshot of create track modal with errors on the fields" />
+<Image
+  src={modalError}
+  alt="Screenshot of create track modal with errors on the fields"
+/>
 
 ## Let's write some tests
 

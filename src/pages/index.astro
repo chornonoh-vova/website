@@ -4,7 +4,7 @@ import IconLink from "../components/IconLink.astro";
 import { SITE_DESCRIPTION } from "../constants";
 import { allBlogPosts } from "../lib/posts";
 import Link from "../components/Link.astro";
-import BlogPost from "../components/BlogPost.astro";
+import PostCard from "../components/PostCard.astro";
 import GitHub from "../assets/icons/github.svg";
 import LinkedIn from "../assets/icons/linkedin.svg";
 import Rss from "../assets/icons/rss.svg";
@@ -54,7 +54,7 @@ const recentBlogs = (await allBlogPosts()).slice(0, 3);
             {
                 recentBlogs.map((post) => (
                     <li>
-                        <BlogPost entry={post} />
+                        <PostCard entry={post} />
                     </li>
                 ))
             }
