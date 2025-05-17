@@ -6,7 +6,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "prepare": "husky"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.2.6",
@@ -21,8 +22,11 @@
     "@types/react-dom": "^19.1.5",
     "astro": "^5.7.13",
     "clsx": "^2.1.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.0.0",
     "lucide-react": "^0.511.0",
     "motion": "^12.12.1",
+    "prettier": "^3.5.3",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^3.3.0",

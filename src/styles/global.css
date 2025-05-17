@@ -3,37 +3,37 @@
 @plugin "@tailwindcss/forms";
 
 @theme {
-    --font-body: Inter, sans-serif;
+  --font-body: Inter, sans-serif;
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 html,
 body {
-    @apply size-full;
+  @apply size-full;
 }
 
 body {
-    @apply font-sans antialiased;
-    @apply bg-neutral-50 dark:bg-neutral-900;
-    @apply text-black/75 dark:text-white/75;
+  @apply font-sans antialiased;
+  @apply bg-neutral-50 dark:bg-neutral-900;
+  @apply text-black/75 dark:text-white/75;
 }
 
 .astro-code {
-    @apply border border-neutral-200;
+  @apply border border-neutral-200;
 }
 
 @media (prefers-color-scheme: dark) {
-    .astro-code {
-        @apply border-neutral-700;
-    }
+  .astro-code {
+    @apply border-neutral-700;
+  }
 
-    .astro-code,
-    .astro-code span {
-        color: var(--shiki-dark) !important;
-        background-color: var(--shiki-dark-bg) !important;
-        font-style: var(--shiki-dark-font-style) !important;
-        font-weight: var(--shiki-dark-font-weight) !important;
-        text-decoration: var(--shiki-dark-text-decoration) !important;
-    }
+  .astro-code,
+  .astro-code span {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
+    font-style: var(--shiki-dark-font-style) !important;
+    font-weight: var(--shiki-dark-font-weight) !important;
+    text-decoration: var(--shiki-dark-text-decoration) !important;
+  }
 }
