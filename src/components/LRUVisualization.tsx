@@ -27,7 +27,7 @@ export function LRUVisualization({
   const keys = entries.map(([key]) => key);
 
   return (
-    <div className="not-prose grid grid-cols-1 md:grid-cols-2 w-full gap-2">
+    <div className="not-prose grid w-full grid-cols-1 gap-2 md:grid-cols-2">
       <CacheState
         keys={keys}
         entries={entries}

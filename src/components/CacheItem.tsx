@@ -19,7 +19,7 @@ function CacheItemText({
   return (
     <p
       className={cn(
-        "px-4 py-1 text-neutral-950 dark:text-neutral-50 text-sm border border-transparent",
+        "border border-transparent px-4 py-1 text-sm text-neutral-950 dark:text-neutral-50",
         borderEnd &&
           "rounded-s-sm border-e border-e-neutral-300 dark:border-e-neutral-700",
         className,
