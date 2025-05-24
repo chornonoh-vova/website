@@ -1,0 +1,26 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+type Props = HTMLAttributes<"a">;
+
+const { href }: Props = Astro.props;
+
+const attrs: { target?: string; rel?: string } = {};
+
+const domain = import.meta.env.SITE;
+
+// check if the link is external
+if (
+  typeof href === "string" &&
+  !href.includes(domain) &&
+  !href.startsWith("/") &&
+  !href.startsWith("#")
+) {
+  attrs["target"] = "_blank";
+  attrs["rel"] = "noopener noreferrer";
+}
+---
+
+<a href={href} {...attrs}>
+  <slot />
+</a>

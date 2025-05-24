@@ -1,11 +1,11 @@
 ---
-import Analytics from '@vercel/analytics/astro';
+import Analytics from "@vercel/analytics/astro";
 import "../styles/global.css";
 import { SITE_TITLE } from "../constants";
 
 interface Props {
-    title: string;
-    description: string;
+  title: string;
+  description: string;
 }
 
 const { title, description } = Astro.props;
@@ -27,10 +27,10 @@ const pageTitle = `${title} | ${SITE_TITLE}`;
 
 <!-- RSS auto-discovery -->
 <link
-    rel="alternate"
-    type="application/rss+xml"
-    title={SITE_TITLE}
-    href={new URL("rss.xml", Astro.site)}
+  rel="alternate"
+  type="application/rss+xml"
+  title={SITE_TITLE}
+  href={new URL("rss.xml", Astro.site)}
 />
 
 <!-- Primary Meta Tags -->
@@ -43,21 +43,18 @@ const pageTitle = `${title} | ${SITE_TITLE}`;
 
 <!-- Light/Dark mode -->
 <script is:inline>
-    document.documentElement.classList.toggle(
-        "dark",
-        localStorage.theme === "dark" ||
-            (!("theme" in localStorage) &&
-                window.matchMedia("(prefers-color-scheme: dark)").matches),
-    );
+  document.documentElement.classList.toggle(
+    "dark",
+    localStorage.theme === "dark" ||
+      (!("theme" in localStorage) &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches),
+  );
 
-    window
-        .matchMedia("(prefers-color-scheme: dark)")
-        .addEventListener("change", (event) => {
-            if (!("theme" in localStorage)) {
-                document.documentElement.classList.toggle(
-                    "dark",
-                    event.matches,
-                );
-            }
-        });
+  window
+    .matchMedia("(prefers-color-scheme: dark)")
+    .addEventListener("change", (event) => {
+      if (!("theme" in localStorage)) {
+        document.documentElement.classList.toggle("dark", event.matches);
+      }
+    });
 </script>

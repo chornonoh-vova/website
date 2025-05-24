@@ -13,51 +13,50 @@ const recentBlogs = (await allBlogPosts()).slice(0, 3);
 ---
 
 <Layout title="Home" description={SITE_DESCRIPTION}>
-    <section id="about" class="flex flex-col gap-4">
-        <h1 class="font-semibold">Hi, My name is Volodymyr Chornonoh 👋🏻</h1>
+  <section id="about" class="flex flex-col gap-4">
+    <h1 class="font-semibold">Hi, My name is Volodymyr Chornonoh 👋🏻</h1>
 
-        <p>
-            I'm a full-stack software engineer, focused on building for the web.
-            Currently living in Ukraine 🇺🇦. I'm always thrilled to learn
-            something new, so I've created this website to share interesting and
-            insightful things that I encounter. Welcome to my corner of the
-            internet!
-        </p>
-    </section>
+    <p>
+      I'm a full-stack software engineer, focused on building for the web.
+      Currently living in Ukraine 🇺🇦. I'm always thrilled to learn something
+      new, so I've created this website to share interesting and insightful
+      things that I encounter. Welcome to my corner of the internet!
+    </p>
+  </section>
 
-    <section id="socials" class="flex flex-col gap-4">
-        <h2 class="font-semibold">My Links</h2>
+  <section id="socials" class="flex flex-col gap-4">
+    <h2 class="font-semibold">My Links</h2>
 
-        <div class="flex flex-wrap gap-2">
-            <IconLink href="https://github.com/chornonoh-vova">
-                <GitHub width={18} />
-                GitHub
-            </IconLink>
-            <IconLink href="https://www.linkedin.com/in/volodymyr-chornonoh/">
-                <LinkedIn width={18} />
-                LinkedIn
-            </IconLink>
-            <IconLink href={new URL("rss.xml", Astro.site)}>
-                <Rss width={18} class="stroke-orange-600" />
-                RSS
-            </IconLink>
-        </div>
-    </section>
+    <div class="flex flex-wrap gap-2">
+      <IconLink href="https://github.com/chornonoh-vova">
+        <GitHub width={18} />
+        GitHub
+      </IconLink>
+      <IconLink href="https://www.linkedin.com/in/volodymyr-chornonoh/">
+        <LinkedIn width={18} />
+        LinkedIn
+      </IconLink>
+      <IconLink href={new URL("rss.xml", Astro.site)}>
+        <Rss width={18} class="stroke-orange-600" />
+        RSS
+      </IconLink>
+    </div>
+  </section>
 
-    <section id="blog" class="flex flex-col gap-4">
-        <div class="flex flex-wrap gap-2 items-center justify-between">
-            <h2 class="font-semibold">Recent blog posts</h2>
-            <Link href="/blog" underline>See all blog posts</Link>
-        </div>
+  <section id="blog" class="flex flex-col gap-4">
+    <div class="flex flex-wrap gap-2 items-center justify-between">
+      <h2 class="font-semibold">Recent blog posts</h2>
+      <Link href="/blog" underline>See all blog posts</Link>
+    </div>
 
-        <ul class="flex flex-col gap-2">
-            {
-                recentBlogs.map((post) => (
-                    <li>
-                        <PostCard entry={post} />
-                    </li>
-                ))
-            }
-        </ul>
-    </section>
+    <ul class="flex flex-col gap-2">
+      {
+        recentBlogs.map((post) => (
+          <li>
+            <PostCard entry={post} />
+          </li>
+        ))
+      }
+    </ul>
+  </section>
 </Layout>

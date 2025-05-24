@@ -6,6 +6,8 @@ date: 2025-05-24
 
 import { Image } from "astro:assets";
 import cliqueNPHardUngaBunga from "../../assets/images/clique-np-hard-unga-bunga.png";
+import CliqueExamples from "../../assets/images/clique-examples.svg";
+import { LANGraph } from "../../components/LANGraph.tsx";
 
 Last year, I participated in the [Advent of Code](https://adventofcode.com). This is a collection of Christmas-themed programming puzzles. They are published every day from December 1st to December 25th. There is also a leader board available, but I did not aim for the record-breaking times. For some of the days, just completing them was a challenge as well!
 
@@ -37,7 +39,9 @@ This step is not particularly interesting. But it uses a couple of the rust feat
 
 Here is how we can view the graph that computers will form:
 
-{/* TOOD: Add initial graph */}
+<LANGraph mode="neighbors" client:load />
+
+You can over over the vertices of the graph, and neighbors will be highlighted.
 
 Now, let's iterate over all of the just-parsed links, and keep all of the vertices in the **vs** hash set and all of the neighbor pairs in the **neighbors** hash set. Then, I'm iterating over all of the links once again, and basically trying to find the 3rd vertex that is connected to both of the vertices of the given edge.
 
@@ -80,9 +84,9 @@ This code actually finds all sets of three inter-connected computers 3 times, th
 
 Here's what the graph looks like on the example data:
 
-{/* TODO: add graph with hover, highlighting 3-cliques */}
+<LANGraph mode="3-clique" client:load />
 
-You can hover over the graph vertices to see the other two interconnected computers.
+You can hover over the graph vertices to see the other two interconnected computers. You can also observe that one computer might be a part of multiple sets.
 
 ## Part 2
 
@@ -98,6 +102,10 @@ After solving the first part quickly, I thought that the second part will be a b
 Honestly, this is how I felt like on that day 😅
 
 Turns out, a set of interconnected vertices in a graph is called [clique](https://www.algorist.com/problems/Clique.html). The problem of finding a [maximum clique](https://en.wikipedia.org/wiki/Clique_problem) is [NP-hard](https://en.wikipedia.org/wiki/NP-hardness) so basically, as hard of a problem as it can get.
+
+Here are some of the examples of cliques:
+
+<CliqueExamples />
 
 Kudos to AoC creator - I admire your creativity! I love how AoC gives you such a fun description of a problem, and gently invites you to find a solution for a problem, even the problem that you wouldn't ever hear about. This is particularly important for me, frontend dev, to participate in such events, and challenge myself.
 
@@ -173,12 +181,14 @@ fn lan_party_password(input: &str) -> String {
 
 And that's how these cliques look like on the example data:
 
-{/* TODO: Add graph with hover - highlighting maximum cliques */}
+<LANGraph mode="max-clique" client:load />
 
-Now, when you hover over the vertex in a graph, the maximum clique that contains this vertex will be highlighted.
+Now, when you hover over the vertex in a graph, the maximum clique that contains this vertex will be highlighted. If the hovered over vertex was part of multiple same-size cliques, only one will be highlighted.
 
 ## Conclusion
 
 That's my story solving the hardest day of Advent of Code 2024. You can take a look at a full source code for this and all of the other days in this repository: https://github.com/chornonoh-vova/advent-of-code-2024
+
+I quite enjoyed writing this article and re-building the same algorithms but in TypeScript and hooking them up with React. You can always take a look at the source code of this and other articles in this repository: https://github.com/chornonoh-vova/website. Leave a comment below if you're interested in a walk through of how I built it.
 
 Thank you for reading this article, I hope that it inspired you to also participate in the Advent of Code 😉. See you in the next post!
