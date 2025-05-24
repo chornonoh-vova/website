@@ -1,5 +1,6 @@
 ---
 import Analytics from "@vercel/analytics/astro";
+import SpeedInsights from "@vercel/speed-insights/astro";
 import "../styles/global.css";
 import { SITE_TITLE } from "../constants";
 
@@ -22,7 +23,7 @@ const pageTitle = `${title} | ${SITE_TITLE}`;
 <!-- Canonical URL -->
 <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
 
-<!-- Sitemap -->
+<!-- Site map -->
 <link rel="sitemap" href="/sitemap-index.xml" />
 
 <!-- RSS auto-discovery -->
@@ -40,6 +41,9 @@ const pageTitle = `${title} | ${SITE_TITLE}`;
 
 <!-- Analytics -->
 <Analytics />
+
+<!-- Speed insights -->
+<SpeedInsights />
 
 <!-- Light/Dark mode -->
 <script is:inline>
