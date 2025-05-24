@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useMatchMedia } from "../hooks/useMatchMedia";
 
 const links: [string, string][] = [
   ["kh", "tc"],
@@ -128,6 +129,8 @@ export const LANGraph = ({
 }: {
   mode?: "neighbors" | "3-clique" | "max-clique";
 }) => {
+  const isSM = useMatchMedia("(width < 40rem)");
+
   const graph = useRef(new Graph(links));
 
   const [highlightedNodes, setHighlightedNodes] = useState<string[]>([]);
@@ -137,7 +140,9 @@ export const LANGraph = ({
   const noHighlight =
     "fill-neutral-900 stroke-neutral-900 dark:fill-neutral-50 dark:stroke-neutral-50";
 
-  const pointerEnter = (vertex: string) => {
+  const vertexRadius = isSM ? 5 : 2;
+
+  const pointerOver = (vertex: string) => {
     const allNodes = new Set<string>();
     const allEdges = new Set<string>();
 
@@ -187,43 +192,9 @@ export const LANGraph = ({
     setHighlightedEdges(Array.from(allEdges));
   };
 
-  const pointerLeave = () => {
-    setHighlightedNodes([]);
-    setHighlightedEdges([]);
-  };
-
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 134.63 72">
       <g className="graph" transform="matrix(.77965 0 0 .77965 3.119 68.882)">
-        <g
-          onPointerEnter={() => pointerEnter("kh")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>kh</title>
-          <circle
-            cx="98.12"
-            cy="-48.36"
-            r="1.8"
-            className={
-              highlightedNodes.includes("kh") ? highlight : noHighlight
-            }
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("tc")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>tc</title>
-          <circle
-            cx="124.99"
-            cy="-66.67"
-            r="1.8"
-            className={
-              highlightedNodes.includes("tc") ? highlight : noHighlight
-            }
-          />
-        </g>
         <g className="edge">
           <title>kh--tc</title>
           <path
@@ -233,21 +204,6 @@ export const LANGraph = ({
             }
             stroke-opacity=".5"
             d="M99.89-49.56c4.85-3.31 18.39-12.54 23.3-15.88"
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("ub")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>ub</title>
-          <circle
-            cx="93.88"
-            cy="-10.75"
-            r="1.8"
-            className={
-              highlightedNodes.includes("ub") ? highlight : noHighlight
-            }
           />
         </g>
         <g className="edge">
@@ -261,21 +217,6 @@ export const LANGraph = ({
             d="m97.89-46.34-3.76 33.37"
           />
         </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("ta")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>ta</title>
-          <circle
-            cx="71.72"
-            cy="-82.55"
-            r="1.8"
-            className={
-              highlightedNodes.includes("ta") ? highlight : noHighlight
-            }
-          />
-        </g>
         <g className="edge">
           <title>kh--ta</title>
           <path
@@ -287,21 +228,6 @@ export const LANGraph = ({
             d="M96.99-49.83c-4.27-5.52-19.32-25.02-23.92-30.98"
           />
         </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("td")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>td</title>
-          <circle
-            cx="154.78"
-            cy="-53.83"
-            r="1.8"
-            className={
-              highlightedNodes.includes("td") ? highlight : noHighlight
-            }
-          />
-        </g>
         <g className="edge">
           <title>tc--td</title>
           <path
@@ -311,21 +237,6 @@ export const LANGraph = ({
             }
             stroke-opacity=".5"
             d="M126.95-65.83c5.38 2.32 20.39 8.8 25.82 11.14"
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("qp")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>qp</title>
-          <circle
-            cx="141.45"
-            cy="-23.1"
-            r="1.8"
-            className={
-              highlightedNodes.includes("qp") ? highlight : noHighlight
-            }
           />
         </g>
         <g className="edge">
@@ -350,36 +261,6 @@ export const LANGraph = ({
             d="M139.4-22.57c-7.82 2.03-35.82 9.3-43.54 11.3"
           />
         </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("de")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>de</title>
-          <circle
-            cx="22.78"
-            cy="-77.38"
-            r="1.8"
-            className={
-              highlightedNodes.includes("de") ? highlight : noHighlight
-            }
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("cg")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>cg</title>
-          <circle
-            cx="41.55"
-            cy="-42.95"
-            r="1.8"
-            className={
-              highlightedNodes.includes("cg") ? highlight : noHighlight
-            }
-          />
-        </g>
         <g className="edge">
           <title>de--cg</title>
           <path
@@ -389,21 +270,6 @@ export const LANGraph = ({
             }
             stroke-opacity=".5"
             d="M23.79-75.53c3.29 6.03 13.67 25.08 16.83 30.89"
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("co")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>co</title>
-          <circle
-            cx="57.48"
-            cy="-69.29"
-            r="1.8"
-            className={
-              highlightedNodes.includes("co") ? highlight : noHighlight
-            }
           />
         </g>
         <g className="edge">
@@ -428,21 +294,6 @@ export const LANGraph = ({
             d="M24.88-77.61c8.05-.85 36.86-3.89 44.8-4.72"
           />
         </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("tb")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>tb</title>
-          <circle
-            cx="1.8"
-            cy="-32.79"
-            r="1.8"
-            className={
-              highlightedNodes.includes("tb") ? highlight : noHighlight
-            }
-          />
-        </g>
         <g className="edge">
           <title>cg--tb</title>
           <path
@@ -452,21 +303,6 @@ export const LANGraph = ({
             }
             stroke-opacity=".5"
             d="M39.41-42.4c-6.97 1.78-28.95 7.4-35.65 9.11"
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("ka")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>ka</title>
-          <circle
-            cx="5.28"
-            cy="-62.18"
-            r="1.8"
-            className={
-              highlightedNodes.includes("ka") ? highlight : noHighlight
-            }
           />
         </g>
         <g className="edge">
@@ -502,21 +338,6 @@ export const LANGraph = ({
             d="M59.72-69.21c10.44.41 54.06 2.1 63.48 2.47"
           />
         </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("yn")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>yn</title>
-          <circle
-            cx="105.2"
-            cy="-31"
-            r="1.8"
-            className={
-              highlightedNodes.includes("yn") ? highlight : noHighlight
-            }
-          />
-        </g>
         <g className="edge">
           <title>yn--cg</title>
           <path
@@ -526,21 +347,6 @@ export const LANGraph = ({
             }
             stroke-opacity=".5"
             d="M103.08-31.4c-9.66-1.81-49.53-9.29-59.34-11.14"
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("aq")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>aq</title>
-          <circle
-            cx="53.58"
-            cy="-20.62"
-            r="1.8"
-            className={
-              highlightedNodes.includes("aq") ? highlight : noHighlight
-            }
           />
         </g>
         <g className="edge">
@@ -563,21 +369,6 @@ export const LANGraph = ({
             }
             stroke-opacity=".5"
             d="M52.64-22.37c-2.22-4.11-7.74-14.36-10.05-18.64"
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("vc")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>vc</title>
-          <circle
-            cx="13.93"
-            cy="-12.18"
-            r="1.8"
-            className={
-              highlightedNodes.includes("vc") ? highlight : noHighlight
-            }
           />
         </g>
         <g className="edge">
@@ -613,21 +404,6 @@ export const LANGraph = ({
             d="M2.92-30.88c2.34 3.98 7.74 13.15 9.99 16.98"
           />
         </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("wq")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>wq</title>
-          <circle
-            cx="46.87"
-            cy="-1.8"
-            r="1.8"
-            className={
-              highlightedNodes.includes("wq") ? highlight : noHighlight
-            }
-          />
-        </g>
         <g className="edge">
           <title>tb--wq</title>
           <path
@@ -648,21 +424,6 @@ export const LANGraph = ({
             }
             stroke-opacity=".5"
             d="M16.06-12.64c6.95-1.47 28.88-6.14 35.57-7.56"
-          />
-        </g>
-        <g
-          className="node"
-          onPointerEnter={() => pointerEnter("wh")}
-          onPointerLeave={pointerLeave}
-        >
-          <title>wh</title>
-          <circle
-            cx="162.88"
-            cy="-38.35"
-            r="1.8"
-            className={
-              highlightedNodes.includes("wh") ? highlight : noHighlight
-            }
           />
         </g>
         <g className="edge">
@@ -784,6 +545,183 @@ export const LANGraph = ({
             }
             stroke-opacity=".5"
             d="M44.71-2.48c-6.07-1.91-23.2-7.31-28.9-9.11"
+          />
+        </g>
+
+        <g className="node" onPointerOver={() => pointerOver("kh")}>
+          <title>kh</title>
+          <circle
+            cx="98.12"
+            cy="-48.36"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("kh") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("tc")}>
+          <title>tc</title>
+          <circle
+            cx="124.99"
+            cy="-66.67"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("tc") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("ub")}>
+          <title>ub</title>
+          <circle
+            cx="93.88"
+            cy="-10.75"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("ub") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("ta")}>
+          <title>ta</title>
+          <circle
+            cx="71.72"
+            cy="-82.55"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("ta") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("td")}>
+          <title>td</title>
+          <circle
+            cx="154.78"
+            cy="-53.83"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("td") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("qp")}>
+          <title>qp</title>
+          <circle
+            cx="141.45"
+            cy="-23.1"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("qp") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("de")}>
+          <title>de</title>
+          <circle
+            cx="22.78"
+            cy="-77.38"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("de") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("cg")}>
+          <title>cg</title>
+          <circle
+            cx="41.55"
+            cy="-42.95"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("cg") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("co")}>
+          <title>co</title>
+          <circle
+            cx="57.48"
+            cy="-69.29"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("co") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("tb")}>
+          <title>tb</title>
+          <circle
+            cx="1.8"
+            cy="-32.79"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("tb") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("ka")}>
+          <title>ka</title>
+          <circle
+            cx="5.28"
+            cy="-62.18"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("ka") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("yn")}>
+          <title>yn</title>
+          <circle
+            cx="105.2"
+            cy="-31"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("yn") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("aq")}>
+          <title>aq</title>
+          <circle
+            cx="53.58"
+            cy="-20.62"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("aq") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("vc")}>
+          <title>vc</title>
+          <circle
+            cx="13.93"
+            cy="-12.18"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("vc") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("wq")}>
+          <title>wq</title>
+          <circle
+            cx="46.87"
+            cy="-1.8"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("wq") ? highlight : noHighlight
+            }
+          />
+        </g>
+        <g className="node" onPointerOver={() => pointerOver("wh")}>
+          <title>wh</title>
+          <circle
+            cx="162.88"
+            cy="-38.35"
+            r={vertexRadius}
+            className={
+              highlightedNodes.includes("wh") ? highlight : noHighlight
+            }
           />
         </g>
       </g>
