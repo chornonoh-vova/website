@@ -18,7 +18,7 @@ export function CacheState({
       <Reorder.Group values={keys} onReorder={() => {}}>
         <AnimatePresence initial={false}>
           {entries.length === 0 && (
-            <div className="flex gap-2 items-center border border-neutral-300 dark:border-neutral-700 rounded-md px-4 py-2">
+            <div className="flex items-center gap-2 rounded-md border border-neutral-300 px-4 py-2 dark:border-neutral-700">
               <Info className="size-4" />
               <p>Cache is empty</p>
             </div>

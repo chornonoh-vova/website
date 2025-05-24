@@ -7,49 +7,49 @@ import PostCard from "../../components/PostCard.astro";
 const allPosts = await allBlogPosts();
 
 type ByYear = {
-    [year: string]: CollectionEntry<"blog">[];
+  [year: string]: CollectionEntry<"blog">[];
 };
 
 const postsByYear = allPosts.reduce((acc: ByYear, post) => {
-    const year = post.data.date.getFullYear().toString();
+  const year = post.data.date.getFullYear().toString();
 
-    if (!acc[year]) {
-        acc[year] = [];
-    }
+  if (!acc[year]) {
+    acc[year] = [];
+  }
 
-    acc[year].push(post);
+  acc[year].push(post);
 
-    return acc;
+  return acc;
 }, {});
 
 const years = Object.keys(postsByYear).sort(
-    (a, b) => parseInt(b) - parseInt(a),
+  (a, b) => parseInt(b) - parseInt(a),
 );
 ---
 
 <Layout title="Blog" description="All blog posts">
-    <section class="flex flex-col gap-4">
-        <h1 class="font-semibold">Blog</h1>
+  <section class="flex flex-col gap-4">
+    <h1 class="font-semibold">Blog</h1>
 
-        <p>
-            Here you can see all of my blog posts that I've published, grouped
-            by year.
-        </p>
-    </section>
+    <p>
+      Here you can see all of my blog posts that I've published, grouped by
+      year.
+    </p>
+  </section>
 
-    {
-        years.map((year) => (
-            <section id={year} class="flex flex-col gap-4">
-                <h2 class="font-semibold">{year}</h2>
+  {
+    years.map((year) => (
+      <section id={year} class="flex flex-col gap-4">
+        <h2 class="font-semibold">{year}</h2>
 
-                <ul class="flex flex-col gap-2">
-                    {postsByYear[year].map((post) => (
-                        <li>
-                            <PostCard entry={post} />
-                        </li>
-                    ))}
-                </ul>
-            </section>
-        ))
-    }
+        <ul class="flex flex-col gap-2">
+          {postsByYear[year].map((post) => (
+            <li>
+              <PostCard entry={post} />
+            </li>
+          ))}
+        </ul>
+      </section>
+    ))
+  }
 </Layout>

@@ -23,16 +23,16 @@ function CacheStats({
   }
 
   return (
-    <div className="grid grid-cols-2 border border-neutral-300 dark:border-neutral-700 shadow-sm rounded-md text-neutral-950 dark:text-neutral-50">
-      <div className="px-4 py-2 border-e border-e-neutral-300 dark:border-e-neutral-700">
+    <div className="grid grid-cols-2 rounded-md border border-neutral-300 text-neutral-950 shadow-sm dark:border-neutral-700 dark:text-neutral-50">
+      <div className="border-e border-e-neutral-300 px-4 py-2 dark:border-e-neutral-700">
         <p className="text-xs text-neutral-600 dark:text-neutral-300">Stats</p>
-        <p className="inline-flex flex-wrap w-full gap-1 text-sm">
+        <p className="inline-flex w-full flex-wrap gap-1 text-sm">
           <span>Hits {hits}</span>
           <span>Misses {misses}</span>
         </p>
       </div>
       <div
-        className={cn("px-4 py-2 transition-colors duration-75 rounded-e-sm", {
+        className={cn("rounded-e-sm px-4 py-2 transition-colors duration-75", {
           "bg-red-200/50 dark:bg-red-800": lastValue === undefined,
           "bg-green-200/50 dark:bg-green-800": typeof lastValue === "string",
         })}
@@ -103,7 +103,7 @@ export function CacheControls({
         {reset && (
           <button
             onClick={onResetClick}
-            className="text-sm px-2 border border-neutral-300 dark:border-neutral-700 rounded-sm"
+            className="rounded-sm border border-neutral-300 px-2 text-sm dark:border-neutral-700"
           >
             Reset
           </button>

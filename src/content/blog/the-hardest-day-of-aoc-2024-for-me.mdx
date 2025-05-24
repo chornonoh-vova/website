@@ -1,0 +1,194 @@
+---
+title: "The hardest day of AoC 2024 (for me)"
+description: "Or how I learned about the Bron-Kerbosh algorithm"
+date: 2025-05-24
+---
+
+import { Image } from "astro:assets";
+import cliqueNPHardUngaBunga from "../../assets/images/clique-np-hard-unga-bunga.png";
+import CliqueExamples from "../../assets/images/clique-examples.svg";
+import { LANGraph } from "../../components/LANGraph.tsx";
+
+Last year, I participated in the [Advent of Code](https://adventofcode.com). This is a collection of Christmas-themed programming puzzles. They are published every day from December 1st to December 25th. There is also a leader board available, but I did not aim for the record-breaking times. For some of the days, just completing them was a challenge as well!
+
+I even decided to give myself an extra challenge: I've decided to solve those puzzles in [Rust](https://www.rust-lang.org/). I really liked this language during my time learning if for a work-related project, and I tried applying it to solving these puzzles. And honestly, I learned even more about the language. I received a great deal of practical skills, earned experience with built-in data structures in the standard library, and learned some of the best practices along the way.
+
+Some of the days were easier, and some days were harder, but one day really stood out for me: it's day 23.
+
+## Part 1
+
+Just like every puzzle, this one begins with a description and an example input. The puzzle is all about a LAN party, and how the computers in this network are connected to each other. In the first part of the puzzle, we are asked to find all of the sets of three inter-connected computers. Then we need to filter them so that they contain at least one computer that starts with letter _t_. And the result of the first part is the number of such sets.
+
+Let's start with parsing the input data:
+
+```rust
+fn get_computer_links(input: &str) -> Vec<(&str, &str)> {
+    input
+        .lines()
+        .filter_map(|line| line.split_once('-'))
+        .collect()
+}
+```
+
+This step is not particularly interesting. But it uses a couple of the rust features, that I've found useful during my AoC journey with rust:
+
+- [lines](https://doc.rust-lang.org/std/str/struct.Lines.html) iterator - very useful for the parsing
+- [split_once](https://doc.rust-lang.org/std/string/struct.String.html#method.split_once) method for strings
+- [filter_map](https://doc.rust-lang.org/std/iter/struct.FilterMap.html) iterator - this was so new to me (I used to doing `filter` and `map` in the JS/TS)
+- [tuples](https://doc.rust-lang.org/std/primitive.tuple.html) - very useful for very simple data, when you don't want to create a struct for it
+
+Here is how we can view the graph that computers will form:
+
+<LANGraph mode="neighbors" client:load />
+
+On desktop, you can over over the vertices of the graph, and neighbors will be highlighted. On mobile, just click on the vertex that you want to highlight.
+
+Now, let's iterate over all of the just-parsed links, and keep all of the vertices in the **vs** hash set and all of the neighbor pairs in the **neighbors** hash set. Then, I'm iterating over all of the links once again, and basically trying to find the 3rd vertex that is connected to both of the vertices of the given edge.
+
+Here is how I implemented the first part:
+
+```rust
+fn count_t_computers(input: &str) -> usize {
+    let computer_links = get_computer_links(input);
+
+    let mut neighbors: HashSet<(&str, &str)> = HashSet::new();
+    let mut vs: HashSet<&str> = HashSet::new();
+
+    for (a, b) in &computer_links {
+        vs.insert(a);
+        vs.insert(b);
+        neighbors.insert((a, b));
+        neighbors.insert((b, a));
+    }
+
+    let mut cnt = 0;
+
+    for (a, b) in &computer_links {
+        for v in &vs {
+            if !a.starts_with("t") && !b.starts_with("t") && !v.starts_with("t") {
+                continue;
+            }
+            if neighbors.contains(&(v, a)) && neighbors.contains(&(b, v)) {
+                cnt += 1;
+            }
+        }
+    }
+
+    cnt / 3
+}
+```
+
+> Bonus question: What is the time complexity of this function?
+
+This code actually finds all sets of three inter-connected computers 3 times, that's why in the end I have count divided by 3. Unfortunately, I couldn't figure out a better way of doing it, if you have some ideas, don't hesitate to leave a comment with your suggestion. I've also removed all of the nasty console logging that I did initially when debugging.
+
+Here's what the graph looks like on the example data:
+
+<LANGraph mode="3-clique" client:load />
+
+You can hover over the graph vertices to see the other two interconnected computers. You can also observe that one computer might be a part of multiple sets.
+
+## Part 2
+
+After solving the first part quickly, I thought that the second part will be a breeze as well. And then I read the description: now I need to figure out the largest set of inter-connected computers. Initially, I just thought about expanding my initial solution that found 3 inter-connected computers to 4, 5 and so on. But I quickly realized, that this approach won't work out.
+
+<Image
+  src={cliqueNPHardUngaBunga}
+  alt="Solve day 23 with nested loops - learn from Reddit the clique problem is NP-hard"
+/>
+
+[Source](https://www.reddit.com/r/adventofcode/s/NfpvknjShr)
+
+Honestly, this is how I felt like on that day 😅
+
+Turns out, a set of interconnected vertices in a graph is called [clique](https://www.algorist.com/problems/Clique.html). The problem of finding a [maximum clique](https://en.wikipedia.org/wiki/Clique_problem) is [NP-hard](https://en.wikipedia.org/wiki/NP-hardness) so basically, as hard of a problem as it can get.
+
+Here are some of the examples of cliques:
+
+<CliqueExamples />
+
+Kudos to AoC creator - I admire your creativity! I love how AoC gives you such a fun description of a problem, and gently invites you to find a solution for a problem, even the problem that you wouldn't ever hear about. This is particularly important for me, frontend dev, to participate in such events, and challenge myself.
+
+But, lyrics aside, let's implement the Bron-Kerbosh algorithm in Rust to solve this problem:
+
+```rust
+fn bron_kerbosch<'a>(
+    mut p: HashSet<&'a str>,
+    r: HashSet<&'a str>,
+    mut x: HashSet<&'a str>,
+    n: &HashMap<&'a str, HashSet<&'a str>>,
+) -> Vec<HashSet<&'a str>> {
+    if p.is_empty() && x.is_empty() {
+        return vec![r];
+    }
+
+    let mut res = Vec::new();
+
+    for v in p.clone() {
+        let mut nr = r.clone();
+        nr.insert(v);
+
+        let np = p.clone().intersection(&n[&v]).cloned().collect();
+        let nx = x.clone().intersection(&n[&v]).cloned().collect();
+
+        res.extend(bron_kerbosch(np, nr, nx, n));
+
+        p.remove(&v);
+        x.insert(v);
+    }
+
+    res
+}
+```
+
+This algorithm operates on 3 sets:
+
+- **r** is the set of vertices in the current clique
+- **p** is the set of vertices that can be added to the current clique
+- **x** is the set of vertices that cannot be added to the current clique
+
+Then we are iterating over all vertices in **p**, and try to add it to the current clique. Then function is recursively called on each iteration with **np** and **nx** that are the intersections of the current vertex neighbors.
+
+Kudos to this amazing video explaining the algorithm as well: [video](https://youtu.be/1cwu123VZ4Q?si=0HVYJNnfSHs__MOp)
+
+Here is how it's invoked:
+
+```rust
+fn lan_party_password(input: &str) -> String {
+    let computer_links = get_computer_links(input);
+
+    let mut neighbors: HashMap<&str, HashSet<&str>> = HashMap::new();
+    let mut vs: HashSet<&str> = HashSet::new();
+
+    for (a, b) in computer_links.iter() {
+        vs.insert(a);
+        vs.insert(b);
+        neighbors.entry(a).or_default().insert(b);
+        neighbors.entry(b).or_default().insert(a);
+    }
+
+    let mut computers: Vec<String> = bron_kerbosch(vs, HashSet::new(), HashSet::new(), &neighbors)
+        .iter()
+        .max_by(|c1, c2| c1.len().cmp(&c2.len()))
+        .map(|vs| vs.iter().map(|v| v.to_string()).collect())
+        .unwrap_or_default();
+
+    computers.sort();
+
+    computers.join(",")
+}
+```
+
+And that's how these cliques look like on the example data:
+
+<LANGraph mode="max-clique" client:load />
+
+Now, when you hover over the vertex in a graph, the maximum clique that contains this vertex will be highlighted. If the hovered over vertex was part of multiple same-size cliques, only one will be highlighted.
+
+## Conclusion
+
+That's my story solving the hardest day of Advent of Code 2024. You can take a look at a full source code for this and all of the other days in this repository: https://github.com/chornonoh-vova/advent-of-code-2024
+
+I quite enjoyed writing this article and re-building the same algorithms but in TypeScript and hooking them up with React. You can always take a look at the source code of this and other articles in this repository: https://github.com/chornonoh-vova/website. Leave a comment below if you're interested in a walk through of how I built it.
+
+Thank you for reading this article, I hope that it inspired you to also participate in the Advent of Code 😉. See you in the next post!

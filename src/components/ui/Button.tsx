@@ -9,7 +9,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "py-2 px-4 bg-indigo-500 text-white rounded-md shadow-md",
+        "rounded-md bg-indigo-500 px-4 py-2 text-white shadow-md",
         className,
       )}
       {...rest}

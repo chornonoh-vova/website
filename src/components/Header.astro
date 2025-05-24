@@ -3,17 +3,17 @@ import Link from "./Link.astro";
 ---
 
 <header
-    class="fixed left-0 top-0 right-0 z-50 py-4 bg-neutral-50/75 dark:bg-neutral-900/25 backdrop-blur-sm saturate-200 border-b border-b-neutral-200 dark:border-b-neutral-700"
+  class="fixed top-0 right-0 left-0 z-50 border-b border-b-neutral-200 bg-neutral-50/75 py-4 saturate-200 backdrop-blur-sm dark:border-b-neutral-700 dark:bg-neutral-900/25"
 >
-    <div
-        class="container mx-auto max-w-[80ch] px-5 flex items-center justify-between"
-    >
-        <Link href="/">
-            <span class="font-semibold text-xl">home</span>
-        </Link>
+  <div
+    class="container mx-auto flex max-w-[80ch] items-center justify-between px-5"
+  >
+    <Link href="/">
+      <span class="text-xl font-semibold">home</span>
+    </Link>
 
-        <nav class="flex items-center">
-            <Link href="/blog" underline>blog</Link>
-        </nav>
-    </div>
+    <nav class="flex items-center">
+      <Link href="/blog" underline>blog</Link>
+    </nav>
+  </div>
 </header>

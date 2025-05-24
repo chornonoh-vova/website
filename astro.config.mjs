@@ -30,7 +30,9 @@ export default defineConfig({
 
   integrations: [
     mdx({
-      optimize: true,
+      optimize: {
+        ignoreElementNames: ["a"],
+      },
     }),
     sitemap(),
     react(),

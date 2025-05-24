@@ -4,31 +4,32 @@ import { render, type CollectionEntry } from "astro:content";
 import { allBlogPosts } from "../../lib/posts";
 import Prose from "../../components/Prose.astro";
 import Layout from "../../layouts/Layout.astro";
+import ExternalLink from "../../components/ExternalLink.astro";
 import FormattedDate from "../../components/FormattedDate.astro";
 import PostComments from "../../components/PostComments.astro";
 
 export const getStaticPaths = (async () => {
-    const allPosts = await allBlogPosts();
+  const allPosts = await allBlogPosts();
 
-    return allPosts.map((post) => ({
-        params: { slug: post.id },
-        props: post,
-    }));
+  return allPosts.map((post) => ({
+    params: { slug: post.id },
+    props: post,
+  }));
 }) satisfies GetStaticPaths;
 
 type Props = CollectionEntry<"blog">;
 
 const post = Astro.props;
 
-const { Content } = await render(post);
+const { Content, ...components } = await render(post);
 ---
 
 <Layout title={post.data.title} description={post.data.description}>
-    <Prose as="article">
-        <h1>{post.data.title}</h1>
-        <FormattedDate date={post.data.date} />
-        <Content />
-    </Prose>
+  <Prose as="article">
+    <h1>{post.data.title}</h1>
+    <FormattedDate date={post.data.date} />
+    <Content components={{ ...components, a: ExternalLink }} />
+  </Prose>
 
-    <PostComments />
+  <PostComments />
 </Layout>

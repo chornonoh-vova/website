@@ -4,8 +4,8 @@ import Head from "../components/Head.astro";
 import Header from "../components/Header.astro";
 
 type Props = {
-    title: string;
-    description: string;
+  title: string;
+  description: string;
 };
 
 const { title, description } = Astro.props;
@@ -13,16 +13,31 @@ const { title, description } = Astro.props;
 
 <!doctype html>
 <html lang="en">
-    <head>
-        <Head title={title} description={description} />
-    </head>
-    <body>
-        <Header />
-        <main
-            class="container mx-auto max-w-[80ch] px-5 py-20 flex flex-col gap-8"
-        >
-            <slot />
-        </main>
-        <Footer />
-    </body>
+  <head>
+    <Head title={title} description={description} />
+
+    <style is:inline>
+      body {
+        visibility: hidden;
+        opacity: 0;
+      }
+    </style>
+
+    <style is:global>
+      body {
+        visibility: visible;
+        opacity: 1;
+        transition:
+          visibility 0.2s linear,
+          opacity 0.2s linear;
+      }
+    </style>
+  </head>
+  <body>
+    <Header />
+    <main class="container mx-auto flex max-w-[80ch] flex-col gap-8 px-5 py-20">
+      <slot />
+    </main>
+    <Footer />
+  </body>
 </html>
