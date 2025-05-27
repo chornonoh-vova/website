@@ -11,7 +11,7 @@ import { LANGraph } from "../../components/LANGraph.tsx";
 
 Last year, I participated in the [Advent of Code](https://adventofcode.com). This is a collection of Christmas-themed programming puzzles. They are published every day from December 1st to December 25th. There is also a leader board available, but I did not aim for the record-breaking times. For some of the days, just completing them was a challenge as well!
 
-I even decided to give myself an extra challenge: I've decided to solve those puzzles in [Rust](https://www.rust-lang.org/). I really liked this language during my time learning if for a work-related project, and I tried applying it to solving these puzzles. And honestly, I learned even more about the language. I received a great deal of practical skills, earned experience with built-in data structures in the standard library, and learned some of the best practices along the way.
+I even decided to give myself an extra challenge: I've decided to solve those puzzles in [Rust](https://www.rust-lang.org/). I really liked this language during my time learning it for a work-related project, and I tried applying it to solving these puzzles. And honestly, I learned even more about the language. I received a great deal of practical skills, earned experience with built-in data structures in the standard library, and learned some of the best practices along the way.
 
 Some of the days were easier, and some days were harder, but one day really stood out for me: it's day 23.
 
@@ -41,7 +41,7 @@ Here is how we can view the graph that computers will form:
 
 <LANGraph mode="neighbors" client:load />
 
-On desktop, you can over over the vertices of the graph, and neighbors will be highlighted. On mobile, just click on the vertex that you want to highlight.
+On desktop, you can hover over the vertices of the graph, and neighbors will be highlighted. On mobile, just click on the vertex that you want to highlight.
 
 Now, let's iterate over all of the just-parsed links, and keep all of the vertices in the **vs** hash set and all of the neighbor pairs in the **neighbors** hash set. Then, I'm iterating over all of the links once again, and basically trying to find the 3rd vertex that is connected to both of the vertices of the given edge.
 
