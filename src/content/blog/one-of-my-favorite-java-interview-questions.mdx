@@ -230,7 +230,7 @@ Singleton as a pattern itself has significant downsides:
 - Hidden dependency - it can become hard to track down which classes depend on it
 - Complicates testing - due to the global nature of the singleton, it can make mocking more challenging
 
-On the other hand, it is useful in some cases, like: config classes, logging utilities, metrics collectors.
+On the other hand, it is useful in some cases, like: configuration classes, logging utilities, metrics collectors.
 
 In my day-to-day work, I mostly work with Spring. And Spring allows for Inversion of Control. Basically, the class can define the dependencies without actually creating them. This work is done by the IoC container, and Spring allows for more granular control over the lifetime of the objects:
 
@@ -255,8 +255,8 @@ With all of the upsides and convenience of working with Spring, it might become 
 
 ## Conclusion
 
-In a simple, single-threaded context, a straightforward utility class like EagerSingleton is fine. In a multi-threaded context prefer the HolderSingleton or DoubleCheckingSingleton. As a rule of thumb, it is much better to avoid singletons altogether in the codebase. It is preferable to rely on the DI framework.
+In a simple, single-threaded context, a straightforward utility class like `EagerSingleton` is fine. In a multi-threaded context prefer the `HolderSingleton` or `DoubleCheckingSingleton`. As a rule of thumb, it is much better to avoid singletons altogether in the code base. It is preferable to rely on the DI framework.
 
 And about interviews: while it's okay to lean on frameworks in day-to-day work, understanding the fundamentals shows true engineering mindset - and that's what we're looking for.
 
-Even though we discussed a lot of the details about Singletons today, the general concept remains very simple, implementation of it requires very little knowledge of concepts that I'm sure you already know (like constructors and static methods). This question designed to spatk conversation, show off how you can apply basic and advanced Java concepts to one of the simplest problems that you can think of. Simply put: **Do not be a frameworker, be an engineer!**.
+Even though we discussed a lot of the details about Singletons today, the general concept remains very simple, implementation of it requires very little knowledge of concepts that I'm sure you already know (like constructors and static methods). This question designed to spark conversation, show off how you can apply basic and advanced Java concepts to one of the simplest problems that you can think of. Simply put: **Do not be a frameworker, be an engineer!**.
