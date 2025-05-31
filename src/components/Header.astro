@@ -3,7 +3,8 @@ import Link from "./Link.astro";
 ---
 
 <header
-  class="fixed top-0 right-0 left-0 z-50 border-b border-b-neutral-200 bg-neutral-50/75 py-4 saturate-200 backdrop-blur-sm dark:border-b-neutral-700 dark:bg-neutral-900/25"
+  id="header"
+  class="fixed top-0 right-0 left-0 z-50 border-b border-b-neutral-200 bg-neutral-50/75 py-4 saturate-200 backdrop-blur-sm transition-transform duration-300 dark:border-b-neutral-700 dark:bg-neutral-900/25"
 >
   <div
     class="container mx-auto flex max-w-[80ch] items-center justify-between px-5"
@@ -17,3 +18,35 @@ import Link from "./Link.astro";
     </nav>
   </div>
 </header>
+
+<script>
+  const header = document.getElementById("header");
+  const scrollClass = "-translate-y-full";
+
+  let lastScroll = 0;
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      const currScroll = window.pageYOffset;
+
+      if (!header) {
+        return;
+      }
+
+      if (currScroll <= 0) {
+        header.classList.remove(scrollClass);
+        return;
+      }
+
+      if (currScroll > lastScroll) {
+        header.classList.toggle(scrollClass, true);
+      } else if (currScroll < lastScroll) {
+        header.classList.toggle(scrollClass, false);
+      }
+
+      lastScroll = currScroll;
+    },
+    { passive: true },
+  );
+</script>
