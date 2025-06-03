@@ -1,0 +1,64 @@
+---
+title: "Flood fill algorithm"
+description: "How flood fill algorithm works, visualized"
+date: 2025-06-07
+---
+
+import FloodFillInitial from "../../assets/images/flood-fill-initial.svg";
+import FloodFillStartingPoint from "../../assets/images/flood-fill-starting-point.svg";
+import FloodFill4WayExpansion from "../../assets/images/flood-fill-4-way-expansion.svg";
+import FloodFill8WayExpansion from "../../assets/images/flood-fill-8-way-expansion.svg";
+import FloodFill4WayFinal from "../../assets/images/flood-fill-4-way-final.svg";
+
+Flood fill is an algorithm behind the "paint bucket" tool in MS Paint, Inkscape, and many other image editing software. The principle behind it, surprisingly, can be applied in a game such as Minesweeper. It can also be used in image processing to identify regions of the image with the same features. Let's explore how this algorithm works, look at the process step-by-step, and implement it!
+
+## How it works
+
+Before starting a discussion on how algorithm works, let define our input: 2-D array. Each number in this array represents the pixel of an image. For simplicity, I'll only pick 5 colors: 0 (transparent), 1 (red <span class="inline-block w-3 h-3 bg-red-600 rounded-sm border"></span> ), 2 (orange <span class="inline-block w-3 h-3 bg-orange-600 rounded-sm border"></span>), 3 (lime <span class="inline-block w-3 h-3 bg-lime-600 rounded-sm border"></span>), 4 (blue <span class="inline-block w-3 h-3 bg-blue-600 rounded-sm border"></span>), 5 (fuchsia <span class="inline-block w-3 h-3 bg-fuchsia-600 rounded-sm border"></span>). In reality, though, images are actually represented by 3-D matrix, because every pixel consists of three components: red, green and blue. And additionally, every pixel can contain alpha value (transparency), for example in PNG images.
+
+Each pixel has an X and Y coordinate. `(0, 0)` is placed in the top left corner, and `(3, 5)` is placed in the bottom right corner.
+
+Here is how the simplest image will look like in our example:
+
+<FloodFillInitial class="mx-auto max-w-[443px]" />
+
+In memory it will be represented by the following array:
+
+```json
+[
+  [1, 0, 0, 0, 0, 0],
+  [0, 1, 0, 0, 2, 2],
+  [3, 0, 0, 0, 0, 0],
+  [3, 3, 0, 0, 0, 4]
+]
+```
+
+Let's now go through algorithm step-by-step.
+
+### Starting point
+
+Algorithm begins with a coordinate of a starting pixel. It is chosen by the user of a program, for example clicking on a pixel in Paint or clicking on a square in Minesweeper.
+
+Let's select pixel `(2, 3)` as our starting point:
+
+<FloodFillStartingPoint class="mx-auto max-w-[357px]" />
+
+### Expansion
+
+Then, we need to recursively or iteratively visit all of the neighboring pixels. This is where we can choose what pixels we are considering neighboring. For example, considering only pixels in the same row or column, or also diagonal pixels.
+
+Here's all of the neighbors of `(2, 3)` highlighted when performing 4-way expansion:
+
+<FloodFill4WayExpansion class="mx-auto max-w-[357px]" />
+
+Here's all of the neighbors of `(2, 3)` highlighted when performing 8-way expansion:
+
+<FloodFill8WayExpansion class="mx-auto max-w-[357px]" />
+
+### Boundaries
+
+Expansion stops when we reach a pixel that has a different color or coordinates go out of bounds of the image.
+
+Here's an example of resulting image with 4-way expansion:
+
+<FloodFill4WayFinal class="mx-auto max-w-[357px]" />
