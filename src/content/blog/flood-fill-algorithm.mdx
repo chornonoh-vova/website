@@ -9,6 +9,8 @@ import FloodFillStartingPoint from "../../assets/images/flood-fill-starting-poin
 import FloodFill4WayExpansion from "../../assets/images/flood-fill-4-way-expansion.svg";
 import FloodFill8WayExpansion from "../../assets/images/flood-fill-8-way-expansion.svg";
 import FloodFill4WayFinal from "../../assets/images/flood-fill-4-way-final.svg";
+import FloodFillDfsVisitOrder from "../../assets/images/flood-fill-dfs-visit-order.svg";
+import FloodFillBfsVisitOrder from "../../assets/images/flood-fill-bfs-visit-order.svg";
 
 Flood fill is an algorithm behind the "paint bucket" tool in MS Paint, Inkscape, and many other image editing software. The principle behind it, surprisingly, can be applied in a game such as Minesweeper. It can also be used in image processing to identify regions of the image with the same features. Let's explore how this algorithm works, look at the process step-by-step, and implement it!
 
@@ -62,3 +64,186 @@ Expansion stops when we reach a pixel that has a different color or coordinates 
 Here's an example of resulting image with 4-way expansion:
 
 <FloodFill4WayFinal class="mx-auto max-w-[357px]" />
+
+There are a couple of choices we can make when implementing this algorithm, we already discussed one of them (when talking about neighbors). The second choice we can make is _how_ we'll iterate over all of the pixels, that satisfy a given criteria: with DFS (depth-first search) or BFS (breadth-first search). Let's explore both of them, how they work and implement them.
+
+## DFS Approach
+
+The defining characteristic of the DFS is that before visiting a next neighbor we first visit all of the children of the current node. So, from the previous example, we will visit pixels in the following order:
+
+```
+1:  [ 2, 3 ]
+2:  [ 1, 3 ]
+3:  [ 0, 3 ]
+4:  [ 0, 4 ]
+5:  [ 0, 5 ]
+6:  [ 0, 2 ]
+7:  [ 1, 2 ]
+8:  [ 2, 2 ]
+9:  [ 3, 2 ]
+10: [ 3, 3 ]
+11: [ 3, 4 ]
+12: [ 2, 4 ]
+13: [ 2, 5 ]
+14: [ 2, 1 ]
+15: [ 0, 1 ]
+```
+
+Let’s number all of the painted pixels in the order that they are visited from the example before:
+
+<FloodFillDfsVisitOrder class="mx-auto max-w-[357px]" />
+
+Here's an implementation of this approach:
+
+```typescript
+type Pixel = {
+  row: number;
+  col: number;
+};
+
+const DIRECTIONS = [
+  [-1, 0], // up
+  [0, 1], // right
+  [1, 0], // down
+  [0, -1], // left
+];
+
+function floodFillDFS(
+  image: number[][],
+  startRow: number,
+  startCol: number,
+  color: number,
+): number[][] {
+  const n = image.length;
+  const m = image[0].length;
+
+  if (image[startRow][startCol] === color) {
+    return image;
+  }
+
+  const startColor = image[startRow][startCol];
+
+  function dfs({ row, col }: Pixel) {
+    if (
+      row < 0 ||
+      col < 0 ||
+      row >= n ||
+      col >= m ||
+      image[row][col] !== startColor
+    ) {
+      return;
+    }
+
+    image[row][col] = color;
+
+    for (const [dr, dc] of DIRECTIONS) {
+      const [nextRow, nextCol] = [row + dr, col + dc];
+      dfs({ row: nextRow, col: nextCol });
+    }
+  }
+
+  dfs({ row: startRow, col: startCol });
+
+  return image;
+}
+```
+
+DFS approach relies on recursion to visit all of the neighbors of the current pixel.
+
+There is also a nice little trick that I've utilized here: the `DIRECTIONS` array. Consider the code without it, it would have looked something like this:
+
+```typescript
+dfs({ row: row - 1, col }); // up
+dfs({ row, col: col + 1 }); // right
+dfs({ row: row + 1, col }); // down
+dfs({ row, col: col - 1 }); // left
+```
+
+This code is essentially doing the same, it visits all of the neighbors, but in my opinion, approach with `DIRECTIONS` array is better, because it looks cleaner, and when we need to change what neighbors we consider, we can just update this array, without rewriting the code.
+
+## BFS approach
+
+BFS, on the other hand, visits all of the neighbors before moving to a deeper level. Again, taking our example, we will visit pixels in the following order:
+
+```
+1:  [ 2, 3 ]
+2:  [ 1, 3 ]
+3:  [ 2, 4 ]
+4:  [ 3, 3 ]
+5:  [ 2, 2 ]
+6:  [ 0, 3 ]
+7:  [ 1, 2 ]
+8:  [ 2, 5 ]
+9:  [ 3, 4 ]
+10: [ 3, 2 ]
+11: [ 2, 1 ]
+12: [ 0, 4 ]
+13: [ 0, 2 ]
+14: [ 0, 5 ]
+15: [ 0, 1 ]
+```
+
+Let's number all of the painted pixels in the order that they are visited once again:
+
+<FloodFillBfsVisitOrder class="mx-auto max-w-[357px]" />
+
+Here's an implementation of this approach:
+
+```typescript
+type Pixel = {
+  row: number;
+  col: number;
+};
+
+const DIRECTIONS = [
+  [-1, 0], // up
+  [0, 1], // right
+  [1, 0], // down
+  [0, -1], // left
+];
+
+function floodFillBFS(
+  image: number[][],
+  startRow: number,
+  startCol: number,
+  color: number,
+): number[][] {
+  const n = image.length;
+  const m = image[0].length;
+
+  if (image[startRow][startCol] === color) {
+    return image;
+  }
+
+  const startColor = image[startRow][startCol];
+
+  const queue = new Queue<Pixel>([{ row: startRow, col: startCol }]);
+
+  while (!queue.isEmpty()) {
+    const { row, col } = queue.pop();
+
+    if (
+      row < 0 ||
+      col < 0 ||
+      row >= n ||
+      col >= m ||
+      image[row][col] !== startColor
+    ) {
+      continue;
+    }
+
+    image[row][col] = color;
+
+    for (const [dr, dc] of DIRECTIONS) {
+      const [nextRow, nextCol] = [row + dr, col + dc];
+      queue.push({ row: nextRow, col: nextCol });
+    }
+  }
+
+  return image;
+}
+```
+
+I've used [datastructures-js/queue](https://github.com/datastructures-js/queue) for a Queue implementation.
+
+In the BFS approach we visit all of the children iteratively, and that can be a plus on a very large images (imagine getting a stack overflow error in paint). But otherwise, two approaches are almost identical.

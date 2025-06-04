@@ -8,24 +8,26 @@
     "preview": "astro preview",
     "astro": "astro",
     "prepare": "husky",
-    "lint": "eslint 'scripts/**/*.ts' 'src/**/*.{ts,tsx,astro}'",
+    "check": "astro check",
+    "lint": "eslint .",
     "fmt": "prettier --write --ignore-unknown .",
     "svg-colors": "node --experimental-transform-types ./scripts/svg-colors.ts"
   },
   "dependencies": {
+    "@astrojs/check": "^0.9.4",
     "@astrojs/mdx": "^4.3.0",
     "@astrojs/react": "^4.3.0",
-    "@astrojs/rss": "^4.0.11",
-    "@astrojs/sitemap": "^3.4.0",
-    "@astrojs/vercel": "^8.1.4",
+    "@astrojs/rss": "^4.0.12",
+    "@astrojs/sitemap": "^3.4.1",
+    "@astrojs/vercel": "^8.1.5",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.16",
     "@tailwindcss/vite": "^4.1.8",
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
-    "astro": "^5.8.1",
+    "astro": "^5.8.2",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.511.0",
+    "lucide-react": "^0.513.0",
     "motion": "^12.16.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -33,6 +35,8 @@
     "tailwindcss": "^4.1.8"
   },
   "devDependencies": {
+    "@eslint/compat": "^1.2.9",
+    "@eslint/js": "^9.28.0",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "@typescript-eslint/parser": "^8.33.1",
@@ -43,6 +47,8 @@
     "lint-staged": "^16.1.0",
     "prettier": "^3.5.3",
     "prettier-plugin-astro": "^0.14.1",
-    "prettier-plugin-tailwindcss": "^0.6.12"
+    "prettier-plugin-tailwindcss": "^0.6.12",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.1"
   }
 }
