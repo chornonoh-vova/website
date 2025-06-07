@@ -4,6 +4,8 @@ description: "How flood fill algorithm works, visualized"
 date: 2025-06-07
 ---
 
+import { FloodFillVisualization } from "../../components/FloodFillVisualization.tsx";
+
 import FloodFillInitial from "../../assets/images/flood-fill-initial.svg";
 import FloodFillStartingPoint from "../../assets/images/flood-fill-starting-point.svg";
 import FloodFill4WayExpansion from "../../assets/images/flood-fill-4-way-expansion.svg";
@@ -12,19 +14,19 @@ import FloodFill4WayFinal from "../../assets/images/flood-fill-4-way-final.svg";
 import FloodFillDfsVisitOrder from "../../assets/images/flood-fill-dfs-visit-order.svg";
 import FloodFillBfsVisitOrder from "../../assets/images/flood-fill-bfs-visit-order.svg";
 
-Flood fill is an algorithm behind the "paint bucket" tool in MS Paint, Inkscape, and many other image editing software. The principle behind it, surprisingly, can be applied in a game such as Minesweeper. It can also be used in image processing to identify regions of the image with the same features. Let's explore how this algorithm works, look at the process step-by-step, and implement it!
+Flood fill is the algorithm behind the "paint bucket" tool in MS Paint, Inkscape, and many other image editing software. The principle behind it, surprisingly, can be applied in a game such as Minesweeper (like revealing empty adjacent squares after clicking a blank tile). It can also be used in image processing to identify regions of the image with the same features. Let's explore how this algorithm works, look at the process step-by-step, and implement it!
 
 ## How it works
 
-Before starting a discussion on how algorithm works, let define our input: 2-D array. Each number in this array represents the pixel of an image. For simplicity, I'll only pick 5 colors: 0 (transparent), 1 (red <span class="inline-block w-3 h-3 bg-red-600 rounded-sm border"></span> ), 2 (orange <span class="inline-block w-3 h-3 bg-orange-600 rounded-sm border"></span>), 3 (lime <span class="inline-block w-3 h-3 bg-lime-600 rounded-sm border"></span>), 4 (blue <span class="inline-block w-3 h-3 bg-blue-600 rounded-sm border"></span>), 5 (fuchsia <span class="inline-block w-3 h-3 bg-fuchsia-600 rounded-sm border"></span>). In reality, though, images are actually represented by 3-D matrix, because every pixel consists of three components: red, green and blue. And additionally, every pixel can contain alpha value (transparency), for example in PNG images.
+Before starting a discussion on how algorithm works, let's define our input: 2-D array. Each number in this array represents the pixel of an image. For simplicity, I'll only pick 5 colors: 0 (transparent), 1 (red <span class="inline-block w-3 h-3 bg-red-600 rounded-sm border"></span> ), 2 (orange <span class="inline-block w-3 h-3 bg-orange-600 rounded-sm border"></span>), 3 (lime <span class="inline-block w-3 h-3 bg-lime-600 rounded-sm border"></span>), 4 (blue <span class="inline-block w-3 h-3 bg-blue-600 rounded-sm border"></span>), 5 (fuchsia <span class="inline-block w-3 h-3 bg-fuchsia-600 rounded-sm border"></span>). In reality, though, images are actually represented by 3-D matrix, because every pixel consists of three components: red, green and blue. Additionally, every pixel can contain alpha value (transparency), for example in PNG images.
 
-Each pixel has an X and Y coordinate. `(0, 0)` is placed in the top left corner, and `(3, 5)` is placed in the bottom right corner.
+Each pixel has an X and Y coordinate, where Y is the row and X is column of the 2-D array. The X-axis goes from left to right, and the Y-axis goes from top to bottom. For example, pixel `(0, 0)` is placed in the top left corner, and pixel `(3, 5)` is placed in the bottom right corner.
 
 Here is how the simplest image will look like in our example:
 
 <FloodFillInitial class="mx-auto max-w-[443px]" />
 
-In memory it will be represented by the following array:
+This image has 4 rows and 6 columns, and in memory it will be represented by the following array:
 
 ```json
 [
@@ -65,11 +67,27 @@ Here's an example of resulting image with 4-way expansion:
 
 <FloodFill4WayFinal class="mx-auto max-w-[357px]" />
 
-There are a couple of choices we can make when implementing this algorithm, we already discussed one of them (when talking about neighbors). The second choice we can make is _how_ we'll iterate over all of the pixels, that satisfy a given criteria: with DFS (depth-first search) or BFS (breadth-first search). Let's explore both of them, how they work and implement them.
+There are a couple of choices we can make when implementing this algorithm. We already discussed one of them (when talking about neighbors). The second choice we can make is _how_ we'll iterate over all of the pixels, that satisfy a given criteria: with DFS (depth-first search) or BFS (breadth-first search). Let's explore both of them, how they work and implement them.
+
+But before we start, let's define a type and constant that will be used in both implementations:
+
+```typescript
+type Pixel = {
+  row: number;
+  col: number;
+};
+
+const DIRECTIONS = [
+  [-1, 0], // up
+  [0, 1], // right
+  [1, 0], // down
+  [0, -1], // left
+];
+```
 
 ## DFS Approach
 
-The defining characteristic of the DFS is that before visiting a next neighbor we first visit all of the children of the current node. So, from the previous example, we will visit pixels in the following order:
+The defining characteristic of the DFS is that before visiting a next neighbor, we first visit all of the children of the current node. So, from the previous example, we will visit pixels in the following order:
 
 ```
 1:  [ 2, 3 ]
@@ -96,18 +114,6 @@ Let’s number all of the painted pixels in the order that they are visited from
 Here's an implementation of this approach:
 
 ```typescript
-type Pixel = {
-  row: number;
-  col: number;
-};
-
-const DIRECTIONS = [
-  [-1, 0], // up
-  [0, 1], // right
-  [1, 0], // down
-  [0, -1], // left
-];
-
 function floodFillDFS(
   image: number[][],
   startRow: number,
@@ -161,6 +167,12 @@ dfs({ row, col: col - 1 }); // left
 
 This code is essentially doing the same, it visits all of the neighbors, but in my opinion, approach with `DIRECTIONS` array is better, because it looks cleaner, and when we need to change what neighbors we consider, we can just update this array, without rewriting the code.
 
+Here is an interactive playground with the 10x10 image:
+
+<FloodFillVisualization variant="dfs" client:load />
+
+In this playground, you can select a fill color, click on a pixel, and observe in real-time how DFS performs a flood fill! You can also reset the image back to it's initial state by pressing the "Reset" button.
+
 ## BFS approach
 
 BFS, on the other hand, visits all of the neighbors before moving to a deeper level. Again, taking our example, we will visit pixels in the following order:
@@ -190,18 +202,6 @@ Let's number all of the painted pixels in the order that they are visited once a
 Here's an implementation of this approach:
 
 ```typescript
-type Pixel = {
-  row: number;
-  col: number;
-};
-
-const DIRECTIONS = [
-  [-1, 0], // up
-  [0, 1], // right
-  [1, 0], // down
-  [0, -1], // left
-];
-
 function floodFillBFS(
   image: number[][],
   startRow: number,
@@ -244,6 +244,20 @@ function floodFillBFS(
 }
 ```
 
-I've used [datastructures-js/queue](https://github.com/datastructures-js/queue) for a Queue implementation.
+I've used [datastructures-js/queue](https://github.com/datastructures-js/queue) for a Queue implementation. Note that `queue.pop()` is removing items from the front, instead removing them from back in plain JS array.
 
 In the BFS approach we visit all of the children iteratively, and that can be a plus on a very large images (imagine getting a stack overflow error in paint). But otherwise, two approaches are almost identical.
+
+Here's an interactive playground with 10x10 image:
+
+<FloodFillVisualization variant="bfs" client:load />
+
+In this playground, you can select a fill color, click on a pixel, and observe in real-time how BFS performs a flood fill, and compare it with DFS that you saw previously. You can also reset the image back to it's initial state by pressing the "Reset" button, just as in example from before.
+
+## Conclusion
+
+Flood fill is a deceptively simple algorithm with a wide range of practical uses — from graphics editors to games and image analysis. By starting from a single pixel and expanding outwards, either recursively with DFS or iteratively with BFS, we can quickly identify and fill connected regions of similar color.
+
+While both DFS and BFS approaches achieve the same goal, they differ in performance characteristics. DFS is elegant and easy to implement with recursion, but may hit stack limits on large inputs. BFS is more memory-intensive but safer for deep fills.
+
+Understanding how flood fill works not only helps with building graphical tools or solving programming puzzles, but it also offers a great opportunity to explore fundamental graph traversal concepts in a visual and intuitive way.
