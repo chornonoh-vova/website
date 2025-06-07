@@ -10,7 +10,7 @@
 
 @font-face {
   font-family: "Excalifont";
-  src: url("/Excalifont-Regular.woff2") format("woff");
+  src: url("/Excalifont-Regular.woff2") format("woff2");
 }
 
 html,
