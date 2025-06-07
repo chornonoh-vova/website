@@ -8,6 +8,11 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@font-face {
+  font-family: "Excalifont";
+  src: url("/Excalifont-Regular.woff2") format("woff2");
+}
+
 html,
 body {
   @apply size-full;
