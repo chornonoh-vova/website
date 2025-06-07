@@ -18,9 +18,9 @@ Flood fill is the algorithm behind the "paint bucket" tool in MS Paint, Inkscape
 
 ## How it works
 
-Before starting a discussion on how algorithm works, let's define our input: 2-D array. Each number in this array represents the pixel of an image. For simplicity, I'll only pick 5 colors: 0 (transparent), 1 (red <span class="inline-block w-3 h-3 bg-red-600 rounded-sm border"></span> ), 2 (orange <span class="inline-block w-3 h-3 bg-orange-600 rounded-sm border"></span>), 3 (lime <span class="inline-block w-3 h-3 bg-lime-600 rounded-sm border"></span>), 4 (blue <span class="inline-block w-3 h-3 bg-blue-600 rounded-sm border"></span>), 5 (fuchsia <span class="inline-block w-3 h-3 bg-fuchsia-600 rounded-sm border"></span>). In reality, though, images are actually represented by 3-D matrix, because every pixel consists of three components: red, green and blue. Additionally, every pixel can contain alpha value (transparency), for example in PNG images.
+Before starting a discussion on how the algorithm works, let's define our input: 2-D array. Each number in this array represents the pixel of an image. For simplicity, I'll only pick 5 colors: 0 (transparent), 1 (red <span class="inline-block w-3 h-3 bg-red-600 rounded-sm border"></span> ), 2 (orange <span class="inline-block w-3 h-3 bg-orange-600 rounded-sm border"></span>), 3 (lime <span class="inline-block w-3 h-3 bg-lime-600 rounded-sm border"></span>), 4 (blue <span class="inline-block w-3 h-3 bg-blue-600 rounded-sm border"></span>), 5 (fuchsia <span class="inline-block w-3 h-3 bg-fuchsia-600 rounded-sm border"></span>). In reality, though, images are actually represented by 3-D matrix, because every pixel consists of three components: red, green and blue. Additionally, every pixel can contain alpha value (transparency), for example in PNG images.
 
-Each pixel has an X and Y coordinate, where Y is the row and X is column of the 2-D array. The X-axis goes from left to right, and the Y-axis goes from top to bottom. For example, pixel `(0, 0)` is placed in the top left corner, and pixel `(3, 5)` is placed in the bottom right corner.
+Each pixel has an X and Y coordinate, where Y is the row and X is the column of the 2-D array. The X-axis goes from left to right, and the Y-axis goes from top to bottom. For example, pixel `(0, 0)` is placed in the top left corner, and pixel `(3, 5)` is placed in the bottom right corner.
 
 Here is how the simplest image will look like in our example:
 
@@ -171,7 +171,7 @@ Here is an interactive playground with the 10x10 image:
 
 <FloodFillVisualization variant="dfs" client:load />
 
-In this playground, you can select a fill color, click on a pixel, and observe in real-time how DFS performs a flood fill! You can also reset the image back to it's initial state by pressing the "Reset" button.
+In this playground, you can select a fill color, click on a pixel, and observe in real-time how DFS performs a flood fill! You can also reset the image back to its initial state by pressing the "Reset" button.
 
 ## BFS approach
 
@@ -252,7 +252,7 @@ Here's an interactive playground with 10x10 image:
 
 <FloodFillVisualization variant="bfs" client:load />
 
-In this playground, you can select a fill color, click on a pixel, and observe in real-time how BFS performs a flood fill, and compare it with DFS that you saw previously. You can also reset the image back to it's initial state by pressing the "Reset" button, just as in example from before.
+In this playground, you can select a fill color, click on a pixel, and observe in real-time how BFS performs a flood fill, and compare it with DFS that you saw previously. You can also reset the image back to its initial state by pressing the "Reset" button, just as in example from before.
 
 ## Conclusion
 
