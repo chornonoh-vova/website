@@ -19,10 +19,10 @@ In my practice, I found this really simple (at first glance) question: "How to i
 
 ## How to implement a Singleton in Java?
 
-Firstly, this question tests a baseline knowledge on how to create a singleton, and (almost) all of the implementations share the same pattern:
+Firstly, this question tests a baseline knowledge on how to create a singleton, and (almost) all the implementations share the same pattern:
 
-- private constructor (to prevent others from creating new instances except the class itself)
-- static method to obtain an instance of this class
+- Private constructor (to prevent others from creating new instances except the class itself)
+- Static method to obtain an instance of this class
 
 There are also a couple of different approaches to the creation of a singleton instance itself
 
@@ -188,7 +188,7 @@ public class HolderSingleton {
 }
 ```
 
-This is a [technique](https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom) that I recently learned myself. Turns out, that inner classes are lazily created, so this example also defers the creation of the instance, but what is most interesting here is that it’s also thread-safe! I really liked this approach and the simplicity of it. But what if I tell you, that all of the examples above can be broken?
+This is a [technique](https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom) that I recently learned myself. Turns out, that inner classes are lazily created, so this example also defers the creation of the instance, but what is most interesting here is that it’s also thread-safe! I really liked this approach and the simplicity of it. But what if I tell you, that all the examples above can be broken?
 
 ### Serialization and Reflection
 
@@ -251,7 +251,7 @@ Utilizing Springs IoC container solves the biggest problems about singletons:
 - It’s easier to see what classes dependencies
 - There can be a global state still, but it becomes much easier to deal with one
 
-With all of the upsides and convenience of working with Spring, it might become tempting to over-rely on the framework. But in my opinion, it is still important to understand how Java works under the hood, how Spring itself is creating those beans under the hood. Some of the techniques that we can learn from this question (such as double-locking) can be really useful outside of the context of the singletons.
+With all the upsides and convenience of working with Spring, it might become tempting to over-rely on the framework. But in my opinion, it is still important to understand how Java works under the hood, how Spring itself is creating those beans under the hood. Some of the techniques that we can learn from this question (such as double-locking) can be really useful outside of the context of the singletons.
 
 ## Conclusion
 
