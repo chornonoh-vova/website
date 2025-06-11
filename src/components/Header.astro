@@ -39,11 +39,7 @@ import Link from "./Link.astro";
         return;
       }
 
-      if (currScroll > lastScroll) {
-        header.classList.toggle(scrollClass, true);
-      } else if (currScroll < lastScroll) {
-        header.classList.toggle(scrollClass, false);
-      }
+      header.classList.toggle(scrollClass, currScroll > lastScroll);
 
       lastScroll = currScroll;
     },
