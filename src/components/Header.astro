@@ -34,7 +34,7 @@ import Link from "./Link.astro";
         return;
       }
 
-      if (currScroll <= 0) {
+      if (currScroll <= 0 || currScroll === lastScroll) {
         header.classList.remove(scrollClass);
         return;
       }
