@@ -34,16 +34,12 @@ import Link from "./Link.astro";
         return;
       }
 
-      if (currScroll <= 0) {
+      if (currScroll <= 0 || currScroll === lastScroll) {
         header.classList.remove(scrollClass);
         return;
       }
 
-      if (currScroll > lastScroll) {
-        header.classList.toggle(scrollClass, true);
-      } else if (currScroll < lastScroll) {
-        header.classList.toggle(scrollClass, false);
-      }
+      header.classList.toggle(scrollClass, currScroll > lastScroll);
 
       lastScroll = currScroll;
     },
