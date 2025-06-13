@@ -1,10 +1,10 @@
 ---
 title: "TypeScript vs JavaScript private"
-description: "Deep dive into differences between TS private modifier and native JS private"
+description: "Deep dive into differences between TS private modifier and native JS #private fields"
 date: 2025-06-14
 ---
 
-The first versions of JS were missing quite a lot of features. JavaScript started without classes, visibility modifiers, or traditional OOP features. Instead, it relied on a unique, prototype-based inheritance model. Clunky? Definitely. But once you understood it, it just worked. Even when the classes were introduced natively in ES6, they were basically a wrapper around an old way of creating classes.
+The first versions of JS lacked many features. JavaScript started without classes, visibility modifiers, or traditional OOP features. Instead, it relied on a unique, prototype-based inheritance model. Clunky? Definitely. But once you understood it, it just worked. Even when the classes were introduced natively in ES6, they were basically a wrapper around an old way of creating classes.
 
 Let’s take a glimpse into the past and look at how classes were implemented back then.
 
@@ -51,7 +51,7 @@ student1.greet(); // Inherited from Person
 student1.study();
 ```
 
-Classes were introduced with the introduction of ES6. At their core, they are just syntactic sugar on top of what we’ve just seen. They were designed to streamline OOP programming in JS. Let’s rewrite our examples from before with ES6:
+Classes were introduced in the ES6. At their core, they are just syntactic sugar on top of what we’ve just seen. They were designed to streamline OOP programming in JS. Let’s rewrite our examples from before with ES6:
 
 ```javascript
 class Person {
@@ -128,7 +128,7 @@ student1.study();
 
 I’ve chosen to make properties of a Person class private as well, which leads to them not being available in the Student subclass (we’ll take a look at that problem after).
 
-If we try to access private property outside of a class, we get an error, just as expected:
+If we try to access private property outside a class, we get an error, just as expected:
 
 ```typescript
 person1.name;
@@ -164,7 +164,7 @@ student1.grade; // <- Accessing private property!
 
 We can observe that we can easily access private members from the JS code. It is mentioned here in the TS [docs](https://www.typescriptlang.org/docs/handbook/2/classes.html#caveats).
 
-What we can do about it? There are private properties syntax available in the recent JS versions: [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_properties), it also has great support across all browsers.
+What we can do about it? There private properties syntax available in the recent JS versions: [MDN](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_properties), it also has great support across all browsers.
 
 Unlike TypeScript’s `private`, which only exists at compile-time, JavaScript's `#private` fields enforce privacy at runtime, making them more robust against accidental or malicious access.
 
@@ -235,7 +235,7 @@ There are a couple of advantages when using JS private modifiers:
 - Truly private in runtime
 - TS still checks for access in compile-time
 
-Don’t worry, if you compiling your code for older targets, let’s check out how TS achieves this in targets ES2021 and lower:
+Don’t worry, if you are compiling your code for older targets, let’s check out how TS achieves this in targets ES2021 and lower:
 
 ```javascript
 "use strict";
@@ -311,7 +311,7 @@ class Student extends Person {
 _Student_grade = new WeakMap();
 ```
 
-We are still achieving private access in runtime here, but this leads to an unfortunate drawback: a little performance penalty because TS has to backport this feature with `WeakMa`p (which is a cool under-used feature of JS, btw). But I’d argue that a performance penalty is negligible in this case. It is still important to understand that, though. This transpilation can increase debugging complexity. So there are definitely some trade-offs.
+We are still achieving private access in runtime here, but this leads to an unfortunate drawback: a little performance penalty because TS has to backport this feature with `WeakMap` (which is a cool under-used feature of JS, btw). But I’d argue that a performance penalty is negligible in this case. It is still important to understand that, though. This transpilation can increase debugging complexity. So there are definitely some trade-offs.
 
 Let’s now go back to the elephant in the room, that I’ve set up a little earlier: how do we access some properties/methods in the child classes while maintaining privacy for the outer world? TS has an answer for that: protected visibility modifier.
 
@@ -320,7 +320,7 @@ Unfortunately, JavaScript doesn't have a protected keyword, which means there's 
 - `#private` (strict privacy, no subclass access),
 - or `protected` in TS (compile-time only, not truly private in JS).
 
-Let’s take a quick look at the TS example of the protected modifier:
+Let’s take a brief look at the TS example of the protected modifier:
 
 ```typescript
 class Person {
@@ -354,6 +354,6 @@ class Student extends Person {
 ## Final Thoughts
 
 - Use TypeScript's `private` or `protected` when you're working in a TS environment and want stronger compile-time safety.
-- Use JavaScript’s `#private` fields if runtime enforcement is important or you're shipping a library that should protect the internals.
+- Use JavaScript’s `#private` fields if runtime enforcement is important, or you're shipping a library that should protect the internals.
 
 The good news? You can combine both — using `#private` fields in TS gives you runtime safety plus TypeScript’s type-checking, offering the best of both worlds.
