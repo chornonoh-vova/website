@@ -1,16 +1,16 @@
 ---
 title: "Warehouse simulator from scratch: Part 1"
-description: "Building simulator inspired by Advent of Code 2024, Day 15"
+description: "Building a simulator inspired by Advent of Code 2024, Day 15"
 date: 2025-06-21
 ---
 
-This blog post is inspired by the Advent of Code 2024 Day 15 puzzle: [Warehouse Woes](https://adventofcode.com/2024/day/15). I decided to build a simulation for it, and at the same time, challenge myself to not use any frameworks. Only HTML, CSS, JS, and drawing on a canvas! Well, almost. I decided to use TypeScript instead of JavaScript, because it’s a bit easier to follow code with types, refactor code more confidently, and rely on the TS compiler to catch my mistakes. But other than that, my philosophy was simple: only hardcore, no frameworks 😉
+This blog post is inspired by the Advent of Code 2024 Day 15 puzzle: [Warehouse Woes](https://adventofcode.com/2024/day/15). I decided to build a simulation for it, and at the same time, challenge myself to not use any frameworks. Only HTML, CSS, JS, and drawing on a canvas! Well, almost. I decided to use TypeScript instead of JavaScript because it’s a bit easier to follow code with types, refactor code more confidently, and rely on the TS compiler to catch my mistakes. But other than that, my philosophy was simple: only hardcore, no frameworks 😉
 
 Surprisingly, it was such a breath of fresh air, compared to working with React and doing the same boring enterprise development every day. So, here’s the walkthrough of how I did it. One note before we start, though, I will be omitting non-important bits of the code, but you can always take a look at the full source code in the [repository](https://github.com/chornonoh-vova/warehouse-simulator).
 
 ## Setup
 
-Let’s start with the basics: in the `index.html` file, I have a very simple layout:
+Let’s start with the basics: in the `index.html` file, I have a simple layout:
 
 ```html
 <!doctype html>
@@ -254,11 +254,11 @@ document.querySelectorAll(".close").forEach((btn) => {
 
 ## Puzzle: part 1
 
-Now, let's go through puzzle itself and how I'm displaying the entities on the canvas.
+Now, let's go through the puzzle itself and how I'm displaying the entities on the canvas.
 
 Map of the warehouse looks like this:
 
-```
+```text
 ##########
 #..O..O.O#
 #......O.#
@@ -333,7 +333,7 @@ export class Warehouse {
 }
 ```
 
-This class contains an information about warehouse, and I've setup parsing of the map in the constructor. I chose to use JS Set to store the positions of walls and boxes, but I encountered a limitation here. My position is represented by an object, and when storing objects event with the same properties, they are treated by JS as different (because they are compared by reference instead of value). That's why I store position hashes in the Set instead. Let's take a look at the position:
+This class contains information about the warehouse, and I've setup parsing of the map in the constructor. I chose to use JS Set to store the positions of walls and boxes, but I encountered a limitation here. My position is represented by an object, and when storing objects event with the same properties, they are treated by JS as different (because they are compared by reference instead of value). That's why I store position hashes in the Set instead. Let's take a look at the position:
 
 ```typescript
 export type Position = {
@@ -519,7 +519,7 @@ Images of the walls and boxes are drawn as-is, but bulldozer drawing is a little
 
 ## Adding interactivity
 
-Here's how to setup custom map upload:
+Here's how to set up custom map upload:
 
 ```typescript
 let uploadedMap: string | undefined;
