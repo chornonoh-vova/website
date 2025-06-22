@@ -47,6 +47,19 @@ const pageTitle = `${title} | ${SITE_TITLE}`;
 <!-- Speed insights -->
 <SpeedInsights />
 
+<!-- Theme colors -->
+<meta name="color-scheme" content="light dark" />
+<meta
+  name="theme-color"
+  content="#fafafa"
+  media="(prefers-color-scheme: light)"
+/>
+<meta
+  name="theme-color"
+  content="#171717"
+  media="(prefers-color-scheme: dark)"
+/>
+
 <!-- Light/Dark mode -->
 <script is:inline>
   document.documentElement.classList.toggle(

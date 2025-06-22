@@ -607,17 +607,21 @@ The logic is as follows:
 Here's how keyboard and button controls are set up:
 
 ```typescript
-document.addEventListener("keydown", (event) => {
-  const key = event.key;
+document.addEventListener(
+  "keydown",
+  (event) => {
+    const key = event.key;
 
-  if (!ALL_KEYS.includes(key)) {
-    return;
-  }
+    if (!ALL_KEYS.includes(key)) {
+      return;
+    }
 
-  const direction = DIRECTIONS[ALL_KEYS.indexOf(key) % 4];
-  warehouse.bulldozer.direction = direction;
-  warehouse.moveBulldozer(direction);
-}, { passive: true })
+    const direction = DIRECTIONS[ALL_KEYS.indexOf(key) % 4];
+    warehouse.bulldozer.direction = direction;
+    warehouse.moveBulldozer(direction);
+  },
+  { passive: true },
+);
 
 const mapInput = document.getElementById("map")! as HTMLInputElement;
 
@@ -625,7 +629,7 @@ const mapInput = document.getElementById("map")! as HTMLInputElement;
   document.getElementById("up"),
   document.getElementById("right"),
   document.getElementById("down"),
-  document.getElementById("left")
+  document.getElementById("left"),
 ].forEach((btn, idx) => {
   btn?.addEventListener("click", (event) => {
     event.preventDefault();
@@ -634,7 +638,6 @@ const mapInput = document.getElementById("map")! as HTMLInputElement;
     warehouse.moveBulldozer(direction);
   });
 });
-
 ```
 
 I placed `ALL_KEYS` in an array in such a way, that key for moving up is placed first, right - second, down - third, left - fourth. So to get the direction to move (and `DIRECTIONS` array is structured in the same way) we can get the index and modulo it by 4. In the case of buttons, to not repeat the same `addEventListener`, I've added all of the buttons in the array, in the same order as `DIRECTIONS` and index of a button is just an index of the direction.
@@ -646,4 +649,3 @@ That's pretty much it about this simulation. Here's how it looks like:
 ![Warehouse simulator](../../assets/images/warehouse-map-to-canvas.png)
 
 I've decided to split the simulation into 2 parts (just like the original puzzle is split into 2 parts). So stay tuned for a part 2, where I'll implement the rest of the moving logic, new entity type - container, and its rendering. And, I'll publish a playable version - so you can play it from your browser!
-
