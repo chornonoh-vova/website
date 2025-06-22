@@ -1,16 +1,24 @@
 ---
+import { Image } from "astro:assets";
 import Link from "./Link.astro";
+
+import WebsiteIcon from "../assets/icons/website.png";
 ---
 
 <header
   id="header"
-  class="fixed top-0 right-0 left-0 z-50 border-b border-b-neutral-200 bg-neutral-50/75 py-4 saturate-200 backdrop-blur-sm transition-transform duration-300 dark:border-b-neutral-700 dark:bg-neutral-900/25"
+  class="fixed top-0 right-0 left-0 z-50 border-b border-b-neutral-200 bg-neutral-50/75 py-1 saturate-200 backdrop-blur-sm transition-transform duration-300 dark:border-b-neutral-700 dark:bg-neutral-900/25"
 >
   <div
     class="container mx-auto flex max-w-[80ch] items-center justify-between px-5"
   >
     <Link href="/">
-      <span class="text-xl font-semibold">home</span>
+      <Image
+        src={WebsiteIcon}
+        width={WebsiteIcon.width / 2}
+        densities={[1.5, 2]}
+        alt="Volodymyr's website logo"
+      />
     </Link>
 
     <nav class="flex items-center">
