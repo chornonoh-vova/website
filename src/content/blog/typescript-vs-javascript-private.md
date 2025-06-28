@@ -297,7 +297,7 @@ class Person {
     );
   }
 }
-(_Person_name = new WeakMap()), (_Person_age = new WeakMap());
+((_Person_name = new WeakMap()), (_Person_age = new WeakMap()));
 class Student extends Person {
   constructor(name, age, grade) {
     super(name, age);

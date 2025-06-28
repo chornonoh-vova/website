@@ -1,0 +1,381 @@
+---
+title: "Warehouse simulator from scratch: Part 2"
+description: "Finishing up the simulator inspired by Advent of Code 2024, Day 15"
+date: 2025-06-28
+---
+
+import WarehouseContainerLeftRight from "../../assets/images/warehouse-container-left-right.svg";
+import WarehouseContainerUp from "../../assets/images/warehouse-container-up.svg";
+
+> This post is a part 2 of the mini-series, read part 1 [here](/blog/warehouse-simulator-part-1)
+
+In this post, I'll continue building this mini warehouse simulator, by first implementing parsing of part 2 of the original puzzle. Then we'll work on updating the movement logic to support new container entities. Finally, we'll see how this mini simulator can be deployed to GitHub pages. And, as a bonus, we'll update the movement logic, so that warehouse can have both boxes and containers, and they can interact with each other correctly.
+
+## Puzzle, part 2
+
+Part 2 of the puzzle is very similar to the part one with a key difference: now everything on the map is twice as wide (except of the robot).
+
+So, that:
+
+- `#` becomes `##`
+- `O` becomes `[]` (instead of two boxes, there will be one wide container)
+- `.` becomes `..`
+- And, finally, `@` stays the same, but with added padding so that map layout stays correct `@.`
+
+Here's how our example map will look like:
+
+```typescript
+export const exampleMap = `####################
+##....[]....[]..[]##
+##............[]..##
+##..[][]....[]..[]##
+##....[]@.....[]..##
+##[]##....[]......##
+##[]....[]....[]..##
+##..[][]..[]..[][]##
+##........[]......##
+####################`;
+```
+
+To support containers I've introduced new type `Container`:
+
+```typescript
+type Container = {
+  left: Position;
+  right: Position;
+};
+```
+
+Containers are different from the boxes, and to represent them, we need to have two positions instead of one: left and right. This will be crucial when implementing movements, because we will need to make sure that we maintain integrity of them. In simpler words, we can't move left part of the container and leave the right part at the same place, and vice versa.
+
+And I've updated `Warehouse` data structure to store the containers appropriately:
+
+```typescript
+export class Warehouse {
+  // ...
+  containersLeft: Map<PositionHash, Container>;
+  containersRight: Map<PositionHash, Container>;
+  // ...
+}
+```
+
+This time, I've used JS Map instead of Set, and you'll see why later, when I'll be implementing movements.
+
+Let's now update the parsing:
+
+```typescript
+export class Warehouse {
+  // ...
+  constructor(map: string) {
+    // ...
+    this.containersLeft = new Map();
+    this.containersRight = new Map();
+    // ...
+    for (let row = 0; row < this.height; ++row) {
+      for (let col = 0; col < this.width; ++col) {
+        const tile = tiles[row][col];
+        const position = { row, col };
+        const positionHash = getPositionHash(position);
+        switch (tile) {
+          // ...
+          case "[": {
+            const right = { row, col: col + 1 };
+            const rightHash = getPositionHash(right);
+            const container = { left: position, right };
+            this.containersLeft.set(positionHash, container);
+            this.containersRight.set(rightHash, container);
+            break;
+          }
+          // ...
+        }
+      }
+    }
+    // ...
+  }
+}
+```
+
+When writing this post after the implementation, I now realize that I'm only checking for the left part of the container (e.g. the `[` symbol), so it's entirely possible to break the simulator by providing the malformed input. I'll need to think on adding more checks for the user input. For now, though, I'm just focusing on the core part of the parsing, logic, and rendering.
+
+There's nothing really special about rendering, apart from the fact, that the image is twice as wide, and apart from that change, it looks really similar to drawing boxes and walls:
+
+```typescript
+const container = new Image(TILE_SIZE * 2, TILE_SIZE);
+container.src = "/Container.png";
+
+export function drawContainer(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+) {
+  ctx.drawImage(container, x, y, TILE_SIZE * 2, TILE_SIZE);
+}
+```
+
+Let's now move on to implementing movement logic.
+
+## Movement logic
+
+Updates to the bulldozer logic are pretty simple: we just take a look at which container might be affected (by looking up either left or right part), and try to move affected container.
+
+```typescript
+export class Warehouse {
+  // ...
+  moveBulldozer(direction: Direction) {
+    // ...
+    if (this.boxes.has(nextPositionHash)) {
+      // ...
+    } else if (this.containersRight.has(nextPositionHash)) {
+      const container = this.containersRight.get(nextPositionHash)!;
+      if (this.canMoveContainer(container, direction)) {
+        this.moveContainer(container, direction);
+        this.bulldozer.position = nextPosition;
+      }
+    } else if (this.containersLeft.has(nextPositionHash)) {
+      const container = this.containersLeft.get(nextPositionHash)!;
+      if (this.canMoveContainer(container, direction)) {
+        this.moveContainer(container, direction);
+        this.bulldozer.position = nextPosition;
+      }
+    } // ...
+  }
+}
+```
+
+When considering movement of the containers to the left or right, we need to only account two cases: when there's neighboring container or neighboring wall.
+
+<WarehouseContainerLeftRight class="mx-auto max-w-[420px]" />
+
+When considering up or down movement of the containers, we need to account for multiple cases:
+
+- There is one container neighboring
+- There are two different containers neighboring
+- One of the next positions or both are walls
+
+Here are all of the possible configurations of the containers that we need to account for.
+
+<WarehouseContainerUp class="mx-auto max-w-[700px]" />
+
+For moving down, though, cases are the same, just mirrored horizontally. All of those configurations might look like a lot, but we can greatly simplify our code to handle them all. First of all, I'm not handling up and down separately, but together. Let's take a look at how it all comes together in two methods: `canMoveContainer` and `moveContainer`.
+
+```typescript
+export class Warehouse {
+  // ...
+  private canMoveContainer(
+    container: Container,
+    direction: Direction,
+  ): boolean {
+    const leftHash = getPositionHash(container.left);
+    const rightHash = getPositionHash(container.right);
+
+    const nextLeft = getNextPosition(container.left, direction);
+    const nextRight = getNextPosition(container.right, direction);
+    const nextLeftHash = getPositionHash(nextLeft);
+    const nextRightHash = getPositionHash(nextRight);
+
+    if (leftHash === nextRightHash) {
+      if (this.containersRight.has(nextLeftHash)) {
+        return this.canMoveContainer(
+          this.containersRight.get(nextLeftHash)!,
+          direction,
+        );
+      }
+
+      return !this.walls.has(nextLeftHash);
+    } else if (rightHash === nextLeftHash) {
+      if (this.containersLeft.has(nextRightHash)) {
+        return this.canMoveContainer(
+          this.containersLeft.get(nextRightHash)!,
+          direction,
+        );
+      }
+
+      return !this.walls.has(nextRightHash);
+    } else if (this.containersLeft.has(nextLeftHash)) {
+      return this.canMoveContainer(
+        this.containersLeft.get(nextLeftHash)!,
+        direction,
+      );
+    } else {
+      let canMoveRight = false;
+
+      if (this.containersLeft.has(nextRightHash)) {
+        canMoveRight = this.canMoveContainer(
+          this.containersLeft.get(nextRightHash)!,
+          direction,
+        );
+      } else {
+        canMoveRight = !this.walls.has(nextRightHash);
+      }
+
+      let canMoveLeft = false;
+
+      if (this.containersRight.has(nextLeftHash)) {
+        canMoveLeft = this.canMoveContainer(
+          this.containersRight.get(nextLeftHash)!,
+          direction,
+        );
+      } else {
+        canMoveLeft = !this.walls.has(nextLeftHash);
+      }
+
+      return canMoveRight && canMoveLeft;
+    }
+  }
+
+  private moveContainer(container: Container, direction: Direction) {
+    const leftHash = getPositionHash(container.left);
+    const rightHash = getPositionHash(container.right);
+
+    const nextLeft = getNextPosition(container.left, direction);
+    const nextRight = getNextPosition(container.right, direction);
+    const nextLeftHash = getPositionHash(nextLeft);
+    const nextRightHash = getPositionHash(nextRight);
+
+    if (leftHash === nextRightHash) {
+      if (this.containersRight.has(nextLeftHash)) {
+        this.moveContainer(this.containersRight.get(nextLeftHash)!, direction);
+      }
+    } else if (rightHash === nextLeftHash) {
+      if (this.containersLeft.has(nextRightHash)) {
+        this.moveContainer(this.containersLeft.get(nextRightHash)!, direction);
+      }
+    } else if (this.containersLeft.has(nextLeftHash)) {
+      this.moveContainer(this.containersLeft.get(nextLeftHash)!, direction);
+    } else {
+      if (this.containersLeft.has(nextRightHash)) {
+        this.moveContainer(this.containersLeft.get(nextRightHash)!, direction);
+      }
+
+      if (this.containersRight.has(nextLeftHash)) {
+        this.moveContainer(this.containersRight.get(nextLeftHash)!, direction);
+      }
+    }
+
+    this.containersLeft.delete(leftHash);
+    this.containersRight.delete(rightHash);
+
+    this.containersLeft.set(nextLeftHash, { left: nextLeft, right: nextRight });
+    this.containersRight.set(nextRightHash, {
+      left: nextLeft,
+      right: nextRight,
+    });
+  }
+}
+```
+
+These to functions, are again, recursive, just like the `canMoveBox` and `moveBox` are. And while reading the code, you can see why I've chosen Map for storing container left and right parts: it's so much easier to get the whole container this way! In December, I was solving these puzzles in Rust, like I mentioned in [this](/blog/the-hardest-day-of-aoc-2024-for-me) blog post. You can take a look at my original solution for day 15 [here](http://github.com/chornonoh-vova/advent-of-code-2024/blob/main/day-15/src/main.rs). But beware, this code is _terrible_ 😅
+
+At this point, movement is working as expected, so I decided to tackle the next thing: deployment.
+
+## Deploying
+
+I decided to use GitHub pages for this project, because I didn't had too much experience working with it.
+
+Here's how to create a GitHub action to deploy project to GitHub pages:
+
+```yaml
+name: "Deploy to Pages"
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: "npm"
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Upload dist folder
+          path: "./dist"
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+This action is:
+
+- Running on every [push](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onpushbranchestagsbranches-ignoretags-ignore) to `main` branch or manually via [`workflow_dispatch`](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#onworkflow_dispatch)
+- Ensures that only one job or workflow is running via [`concurrency`](https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#concurrency)
+- Sets up [node](https://github.com/actions/setup-node), installs dependencies, and builds an artifact for deployment
+- And, finally, uploads and deploys artifact utilizing multiple actions: [actions/configure-pages](https://github.com/actions/configure-pages), [actions/upload-pages-artifact](https://github.com/actions/upload-pages-artifact), [actions/deploy-pages](https://github.com/actions/deploy-pages)
+
+After pushing this workflow, and fixing vite configuration to include base like this:
+
+```typescript
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  base: "/warehouse-simulator/",
+});
+```
+
+I can finally share with you the link that you can visit and play for yourself: https://chornonoh-vova.github.io/warehouse-simulator/ 🥳
+
+## Bonus
+
+This is an entirely optional part, that I've wanted to tackle: moving both containers and boxes.
+
+For that, I've modified our example map that we were working with so far to include a couple of boxes:
+
+```typescript
+export const exampleMap =
+  "####################\n" +
+  "##....[]....[]..[]##\n" +
+  "##........O...OO..##\n" +
+  "##..[][]....[]..[]##\n" +
+  "##....OO@.....[]..##\n" +
+  "##[]##....[]O.....##\n" +
+  "##[]....[]....[]..##\n" +
+  "##..[]OO..[]..OO[]##\n" +
+  "##........[]......##\n" +
+  "####################\n";
+```
+
+And updated `canMoveBox`, `moveBox`, `canMoveContainer` and `moveContainer` functions in this [commit](https://github.com/chornonoh-vova/warehouse-simulator/commit/74b950adc08542729edd5ffabe9e993d85007616). Turns out, it was not really hard, I just had to carefully consider where I needed to add additional cases for movements. For example, when moving box, I've added checking of the affected containers by left or right part. And when moving container, I've added additional checks for boxes movements where previously I was only considering walls.
+
+## Conclusion
+
+We've come a long way in this mini-series. From a blank slate to a fully working simulator, all without using any external dependencies! I know this simulator isn’t some great engineering marvel, to be honest, it’s a bit silly. But not every project needs to change the world. What matters most to me are the little mistakes, the bugs I’ve overcome along the way.
+
+I’ve always struggled to finish my side projects. But building these small, silly simulators and games not only brings me joy, it also helps me stay focused on a small, manageable scope.
+
+I hope these words inspire you to build something small and silly too. Because you can gain a lot of valuable experience along the way.
+
+As always, you can check out the full source code in this repository:
+
+[GitHub - Warehouse Simulator](https://github.com/chornonoh-vova/warehouse-simulator)
+
+I’ve also included some example inputs in the examples directory.
+
+And now, you can play the simulator here:
+
+[Play the Warehouse Simulator](https://chornonoh-vova.github.io/warehouse-simulator/)

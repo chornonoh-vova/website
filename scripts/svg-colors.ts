@@ -5,6 +5,7 @@ const replacements = [
   [/stroke="#1e1e1e"/g, 'class="stroke-neutral-900 dark:stroke-neutral-50"'],
   [/fill="#1e1e1e"/g, 'class="fill-neutral-900 dark:fill-neutral-50"'],
   [/fill="#e03131"/g, 'class="fill-red-600"'],
+  [/stroke="#e03131"/g, 'class="stroke-red-600"'],
   [/fill="#e8590c"/g, 'class="fill-orange-600"'],
   [/fill="#2f9e44"/g, 'class="fill-lime-600"'],
   [/fill="#1971c2"/g, 'class="fill-blue-600"'],
