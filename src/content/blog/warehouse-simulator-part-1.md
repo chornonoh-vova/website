@@ -4,7 +4,7 @@ description: "Building a simulator inspired by Advent of Code 2024, Day 15"
 date: 2025-06-21
 ---
 
-> This post is part 1 of the mini-series, read part 2 [here](/blog/warehouse-simulator-part-2)
+> This post is part 1 of the miniseries. Read part 2 [here](/blog/warehouse-simulator-part-2).
 
 This blog post is inspired by the Advent of Code 2024 Day 15 puzzle: [Warehouse Woes](https://adventofcode.com/2024/day/15). I decided to build a simulation for it, and at the same time, challenge myself to not use any frameworks. Only HTML, CSS, JS, and drawing on a canvas! Well, almost. I decided to use TypeScript instead of JavaScript because it’s a bit easier to follow code with types, refactor code more confidently, and rely on the TS compiler to catch my mistakes. But other than that, my philosophy was simple: only hardcore, no frameworks 😉
 
