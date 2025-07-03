@@ -37,13 +37,9 @@ type ToggleGroupContext<T> = {
   setCurrentValue: (newVal: T) => void;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ToggleGroupContext = createContext<ToggleGroupContext<any>>({
-  currentValue: "",
-  setCurrentValue: () => {
-    throw new Error("no set value function");
-  },
-});
+const ToggleGroupContext = createContext<ToggleGroupContext<unknown> | null>(
+  null,
+);
 
 type ToggleGroupProps<T> = {
   label: string;
@@ -62,13 +58,16 @@ function ToggleGroup<T>({
     <ToggleGroupContext
       value={{
         currentValue: value,
-        setCurrentValue: onValueChange,
+        setCurrentValue: onValueChange as (newVal: unknown) => void,
       }}
     >
       <div>
-        <label htmlFor={id}>{label}</label>
+        <label id={`${id}-label`} htmlFor={id}>
+          {label}
+        </label>
         <div
           id={id}
+          aria-labelledby={`${id}-label`}
           role="radiogroup"
           className="mt-1 flex flex-row items-center justify-center gap-0 shadow-xs"
         >
@@ -84,14 +83,19 @@ function ToggleGroupItem<T>({
   children,
   ...rest
 }: ComponentPropsWithRef<"button"> & { value: T }) {
-  const { currentValue, setCurrentValue } =
-    use<ToggleGroupContext<T>>(ToggleGroupContext);
+  const context = use(ToggleGroupContext);
+  if (!context) {
+    throw new Error("ToggleGroupItem must be used within a ToggleGroup");
+  }
+  const { currentValue, setCurrentValue } = context as ToggleGroupContext<T>;
 
   const isSelected = value === currentValue;
   const handleClick = () => setCurrentValue(value);
 
   return (
     <button
+      role="radio"
+      aria-checked={isSelected}
       data-selected={isSelected}
       tabIndex={0}
       onClick={handleClick}
@@ -115,7 +119,7 @@ function MapTable({
   const headerBg = "bg-gray-50 dark:bg-gray-700";
 
   return (
-    <table className="mt-4 w-full table-auto border-collapse rounded-sm text-sm">
+    <table className="mt-4 w-full table-auto border-collapse text-sm">
       <caption className="caption-bottom pt-2 text-xs">
         Input string {repr === "hex" ? "hexadecimal" : "binary"} representation
       </caption>
@@ -133,7 +137,7 @@ function MapTable({
         {map.map(([ch, bytes], i) => (
           <tr key={`${ch}-${i}`}>
             <th scope="row" className={cell}>
-              {ch}
+              "{ch}"
             </th>
             <td className={cell}>
               <Bytes bytes={bytes} />
