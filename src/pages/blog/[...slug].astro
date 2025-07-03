@@ -29,7 +29,8 @@ const { Content, ...components } = await render(post);
     <FormattedDate date={post.data.date} />
     <Content components={{ ...components, a: ExternalLink }} />
     <ScrollToTop />
-  </Prose>
 
-  <PostComments />
+    <h3>Comments</h3>
+    <PostComments />
+  </Prose>
 </Layout>

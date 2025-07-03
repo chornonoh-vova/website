@@ -1,0 +1,102 @@
+---
+title: "UTF-8 encoding"
+description: "How text is encoded in UTF-8, visualized"
+date: 2025-07-05
+---
+
+import { UTF8Visualization } from "../../components/UTF8Visualization";
+
+Everything inside the computer is represented as a combination of 0s and 1s. But we, humans, don’t really think in 1s and 0s. Even right now, when I’m writing this blog post, my computer is doing a hard work for me by converting some 1s and 0s and displaying them to me as text. But how are computers doing that? This is a question that I never really asked myself in my early years as a software engineer, but the [Performance Engineering](https://www.csosvita.com/courses/performance-engineering) course from CSOsvita really opened my eyes to that topic. It comes down to one truth: we cannot view any arbitrary sequence of bits; we also need to know how it’s encoded.
+
+Let’s take a look at how UTF-8 encoding works, the most [popular](https://en.wikipedia.org/wiki/Popularity_of_text_encodings) text encoding on the internet.
+
+## How it works
+
+First of all, UTF-8 operates with _code points_. Code point is just a number, assigned to a character in Unicode. For example, the character "a" has a code point of **U+0061**. UTF-8 then defines how those code points are converted to/from binary representation.
+
+UTF-8 is a variable-length encoding, that is one character can take up from 1 to 4 bytes.
+
+Here's how code points are converted to UTF-8
+
+<div class="overflow-x-scroll">
+
+| First code point | Last code point | Byte 1     | Byte 2     | Byte 3     | Byte 4     |
+| ---------------- | --------------- | ---------- | ---------- | ---------- | ---------- |
+| **U+0000**       | **U+007F**      | `0xxxxxxx` |            |            |            |
+| **U+0080**       | **U+07FF**      | `110xxxxx` | `10xxxxxx` |            |            |
+| **U+0800**       | **U+FFFF**      | `1110xxxx` | `10xxxxxx` | `10xxxxxx` |            |
+| **U+01000**      | **U+10FFFF**    | `11110xxx` | `10xxxxxx` | `10xxxxxx` | `10xxxxxx` |
+
+</div>
+
+One of the cool features of the UTF-8 is that ASCII characters are encoded exactly the same. And, additionally, it takes up less space than UTF-16 or UTF-32 which require 16 or 32 bits to encode each character, respectively. There's a catch, though, UTF-16 is also a variable-length encoding, so some characters can take up to 4 bytes. But UTF-32 is always 4 bytes.
+
+Here is a couple of example characters and how they'll be encoded in UTF-8:
+
+- Character "a" (U+0061) is encoded in one byte as `0x61`
+- Character "ŋ" (U+014B) is encoded in two bytes as `0xc58b`
+- Character "დ" (U+10D3) is encoded in three bytes as `0xe18393`
+- Emoji "😂" (U+1F602) is encoded in four bytes as `0xf09f9882`
+
+Let's now build a visualization of the UTF-8.
+
+## Visualization
+
+And we should actually start with an interesting fact: JavaScript (just like Java) uses UTF-16 to encode strings in runtime. This was a bit of surprise to me. I always thought that JS uses UTF-8. There are languages that use UTF-8 for string encoding, for example, Rust. So the task of visualizing UTF-8 encoding with JS actually comes down to converting UTF-16 to UTF-8. I will go down that rabbit hole in some future post, and try to implement it from scratch. But for now, let's concentrate on UTF-8, and to do that, we'll utilize this built-in API in JS: [TextEncoder](https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder).
+
+<UTF8Visualization client:load />
+
+Here's a core of what's powering this table:
+
+```typescript
+const map = useMemo(() => {
+  const radix = repr === "hex" ? 16 : 2;
+  const pad = repr === "hex" ? 2 : 8;
+  const textEncoder = new TextEncoder();
+  const result: [string, string[]][] = [];
+  for (const ch of input) {
+    const encoded = textEncoder.encode(ch);
+    const bytes = Array.from(encoded).map((b) =>
+      b.toString(radix).padStart(pad, "0"),
+    );
+    result.push([ch, bytes]);
+  }
+  return result;
+}, [input, repr]);
+```
+
+Here, I'm iterating over every character in a string, and encoding it into [`Uint8Array`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array), with the help of TextEncoder, and then mapping over every byte and transforming it into hexadecimal or binary string.
+
+I myself only recently learned about the TextEncoder API, and got to use it in practice for this blog post.
+
+## Experiments
+
+Now, you can try inserting this family emoji into the input text box 🧑‍🧑‍🧒‍🧒, and observe the result.
+
+Turns out, this emoji is actually composed of multiple code points:
+
+1. 🧑 (U+1F9D1)
+2. 'ZERO WIDTH JOINER' (U+200D)
+3. 🧑 (U+1F9D1)
+4. 'ZERO WIDTH JOINER' (U+200D)
+5. 🧒 (U+1F9D2)
+6. 'ZERO WIDTH JOINER' (U+200D)
+7. 🧒 (U+1F9D2)
+
+Those "ZERO WIDTH JOINER" code points will be displayed as an empty space in the table, because this code point is only needed to combine multiple code points into one.
+
+You can try inputting the following example as well: র‍্য.
+
+- ZWJ is also used here to combine several characters together.
+- it contains ্('BENGALI SIGN VIRAMA' (U+09CD)). This character does not make sense by itself, but it can only be used in conjunction with another character to add this little sign at the bottom.
+
+One more interesting thing that I found, is that when you enter the "heart" emoji ❤️, it actually is a combination of two code points:
+
+- Unicode Character 'HEAVY BLACK HEART' (U+2764)
+- Unicode Character 'VARIATION SELECTOR-16' (U+FE0F)
+
+Try to find something interesting as well!
+
+## Conclusion
+
+UTF-8 is pretty amazing when you think about it. It keeps things simple for languages like English, while also giving us the power to represent every character from every language, and even emojis! It’s no wonder it became the go-to encoding for the web. In my opinion, for every programmer out there, knowing how UTF-8 works is essential. It’s one of those fundamental technologies that without a doubt, runs out world.
