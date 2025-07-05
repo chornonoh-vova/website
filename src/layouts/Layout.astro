@@ -35,7 +35,10 @@ const { title, description } = Astro.props;
   </head>
   <body>
     <Header />
-    <main class="container mx-auto flex max-w-[80ch] flex-col gap-8 px-5 py-24">
+    <main
+      class="container mx-auto flex max-w-[80ch] flex-col gap-8 px-4 py-24 md:px-5"
+      aria-label="Main site content"
+    >
       <slot />
     </main>
     <Footer />
