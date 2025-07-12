@@ -29,7 +29,7 @@ body {
 }
 
 .katex-html {
-  @apply hidden;
+  @apply sr-only;
 }
 
 @media (prefers-color-scheme: dark) {

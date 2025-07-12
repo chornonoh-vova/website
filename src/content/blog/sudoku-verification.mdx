@@ -1,7 +1,7 @@
 ---
 title: "Sudoku verification"
 description: "Breaking down an algorithm to verify sudoku"
-date: 2025-7-12
+date: 2025-07-12
 ---
 
 import BitStateExample from "../../assets/images/bit-state-example.svg";
@@ -32,9 +32,9 @@ In this approach, I've used the Set to store numbers in rows and columns that we
 function isValidSudoku(board: string[][]): boolean {
   const n = board.length;
 
-  const rows = Array.from({ length: n }, () => new Set());
-  const cols = Array.from({ length: n }, () => new Set());
-  const boxes = Array.from({ length: n }, () => new Set());
+  const rows = Array.from({ length: n }, () => new Set<number>());
+  const cols = Array.from({ length: n }, () => new Set<number>());
+  const boxes = Array.from({ length: n }, () => new Set<number>());
 
   for (let i = 0; i < n; ++i) {
     for (let j = 0; j < n; ++j) {
