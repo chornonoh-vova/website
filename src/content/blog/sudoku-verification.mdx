@@ -1,0 +1,192 @@
+---
+title: "Sudoku verification"
+description: "Breaking down an algorithm to verify sudoku"
+date: 2025-7-12
+---
+
+import BitStateExample from "../../assets/images/bit-state-example.svg";
+import BitwiseAndExample from "../../assets/images/bitwise-and-example.svg";
+import BitwiseOrExample from "../../assets/images/bitwise-or-example.svg";
+
+Recently, I started doing some Sudoku in my not-so-frequent free time. All thanks to this amazing app that I've found, that helps me to build up this daily habit: https://sudokuaday.com/
+
+Imagine how surprised I was that LeetCode has a couple of interesting puzzles related to this! Let's break down and solve one of them together: [36. Valid Sudoku](https://leetcode.com/problems/valid-sudoku/description/)
+
+## Rules
+
+In its essence, Sudoku is just a `9x9` board filled with numbers according to very simple rules:
+
+1. Every row must contain every number from 1 to 9 without repetition
+2. Every column must contain every number from 1 to 9 without repetition
+3. Every `3x3` box must also contain every number from 1 to 9 without repetitions
+
+In this LeetCode question, though, input boards might not be filled out completely (there can be some empty cells), but all of the rules above still apply.
+
+So the algorithm to solve this should be very simple: we need to walk through every cell of the matrix (Sudoku board) and check if the row, column and box that this cell is part of is valid. Let's write some code to solve it this way!
+
+## First approach
+
+In this approach, I've used the Set to store numbers in rows and columns that we've seen so far, so when checking for the next number, it really boils down to looking into the correct set, and adding the number, if we haven't seen it before.
+
+```typescript
+function isValidSudoku(board: string[][]): boolean {
+  const n = board.length;
+
+  const rows = Array.from({ length: n }, () => new Set());
+  const cols = Array.from({ length: n }, () => new Set());
+  const boxes = Array.from({ length: n }, () => new Set());
+
+  for (let i = 0; i < n; ++i) {
+    for (let j = 0; j < n; ++j) {
+      if (board[i][j] === ".") {
+        continue;
+      }
+
+      const num = parseInt(board[i][j]);
+      const idx = Math.trunc(i / 3) * 3 + Math.trunc(j / 3);
+
+      if (rows[i].has(num) || cols[j].has(num) || boxes[idx].has(num)) {
+        return false;
+      }
+
+      rows[i].add(num);
+      cols[j].add(num);
+      boxes[idx].add(num);
+    }
+  }
+
+  return true;
+}
+```
+
+One more interesting thing to note here, is the calculation of the box index. We can imagine the box indexes to be located as a 3x3 grid like so:
+
+```
+0 1 2
+3 4 5
+6 7 8
+```
+
+Let's say that we want to understand, to which box cell with row = 4 and column = 7 corresponds to.
+
+$rowOffset = (row / 3) * 3 = 3$
+
+$colOffset = column / 3 = 2$
+
+$boxIndex = rowOffset + colOffset = 5$
+
+First part calculates offset by row, and the second part calculates offset by column, and by summing them together we get the box index.
+
+## Optimizing with arrays
+
+If we take a closer look into a previous solution, we can see that we don't really need Set! It all really boils down to a fact, that we can only have a total of 9 possible values for a cell value, so we can optimize our solution by using just an array of fixed size and looking up directly by the number value. So here is an implementation:
+
+```typescript
+function isValidSudoku(board: string[][]): boolean {
+  const n = board.length;
+
+  const rows = Array.from({ length: n }, () => new Array(n).fill(0));
+  const cols = Array.from({ length: n }, () => new Array(n).fill(0));
+  const boxes = Array.from({ length: n }, () => new Array(n).fill(0));
+
+  for (let i = 0; i < n; ++i) {
+    for (let j = 0; j < n; ++j) {
+      if (board[i][j] === ".") {
+        continue;
+      }
+
+      const idx = parseInt(board[i][j]) - 1;
+      const box = Math.trunc(i / 3) * 3 + Math.trunc(j / 3);
+
+      if (!!rows[i][idx] || !!cols[j][idx] || !!boxes[box][idx]) {
+        return false;
+      }
+
+      rows[i][idx]++;
+      cols[j][idx]++;
+      boxes[box][idx]++;
+    }
+  }
+
+  return true;
+}
+```
+
+You can notice a couple of things:
+
+1. I'm subtracting 1 from the parsed number value, because parsed number will be from 1 to 9 but indexes need to be from 0 to 8
+2. I'm utilizing JS number to boolean conversion with `!!`, because when the count becomes 1 we need to return (same as `.has` in the first approach)
+
+After looking through it one more time for this blog post, we can improve our array approach by using array of booleans instead of arrays of numbers. It's because we need to keep track of two possible states: whether we've seen this number or not. I'll leave implementation of this idea as an exercise for a reader 😜. But I strongly advise doing so, because after implementing it, it'll be easier to understand the next optimization that we're going to do.
+
+## Bitwise magic
+
+Most of the people will stop at this point, but not me. So I decided to research what else we can do to optimize this piece of code. And, turns out, we can! It is possible with some bit magic.
+
+I'll admit, I'm not that good with bitwise operations 🥲. Maybe it comes down to a fact that most of my time I'm writing in JS/TS, where it's not that common to do these kind of operations. Every time when I see all these smart approaches, and how we as programmers can literally squeeze out more value out from every bit, I get genuinely awed. I'll do my best when trying to explain how the next optimization works.
+
+Ok, so the main idea is to eliminate sub-arrays that we are currently using to check for presence of number in row/column/box with a single number.
+
+While JavaScript number are typically 64-bits floating-point values, the bitwise operations convert them to 32-bit signed integers, so we're going to assume that we're working with 32 bit numbers. And since we need to only store presence/absence of an particular number in the row/column/box, we actually really need only 9 bits of space for every row/column/box!
+
+Let's take a look at some example state:
+
+<BitStateExample class="mx-auto max-w-[408px]" />
+
+In this example, bit #1, #3, #7 and #8 are set. So just by comparing these specific bits we can deduce, whether we have a number in state or not. Let's see how we can check if specific bit is set and how we can actually set the bit.
+
+First of all, we need to convert an index that we want to check to a bit mask by performing [left shift (&lt;&lt;)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Left_shift). For example:
+
+- `1 << 4` becomes `1000` (in binary)
+- `1 << 3` becomes `100` (in binary)
+
+Then, we can perform the [bitwise AND (&)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_AND) on our state and mask to check is specific bit is set:
+
+<BitwiseAndExample class="mx-auto max-w-[521px]" />
+
+If we want to set the specific bit, we can use the same mask and perform the [bitwise OR (|)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_OR) on our state:
+
+<BitwiseOrExample class="mx-auto max-w-[421px]" />
+
+That's pretty much it, here's how it translates to code:
+
+```typescript
+function isValidSudoku(board: string[][]): boolean {
+  const n = board.length;
+
+  const rows = new Uint16Array(n);
+  const cols = new Uint16Array(n);
+  const boxes = new Uint16Array(n);
+
+  for (let i = 0; i < n; ++i) {
+    for (let j = 0; j < n; ++j) {
+      if (board[i][j] === ".") {
+        continue;
+      }
+
+      const idx = parseInt(board[i][j]) - 1;
+      const box = Math.trunc(i / 3) * 3 + Math.trunc(j / 3);
+
+      const mask = 1 << idx;
+
+      if (rows[i] & mask || cols[j] & mask || boxes[box] & mask) {
+        return false;
+      }
+
+      rows[i] |= mask;
+      cols[j] |= mask;
+      boxes[box] |= mask;
+    }
+  }
+
+  return true;
+}
+```
+
+Oh, and also I've used recently introduced [Uint16Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array) instead of just array of numbers to save on a space a little bit (because our 9-bit state requirement still fits within 16 bits).
+
+## Conclusion
+
+Who knew that playing Sudoku in my free time would lead me down a rabbit hole of bitwise tricks and set logic? It’s always fun when a casual hobby meets the world of algorithms, and now I can say that Sudoku helped me write cleaner, faster code!
+
+This was just a taste of how we can use classic problems to explore different approaches. In future posts, I might explore how to solve full Sudoku boards using backtracking and constraint propagation. Stay tuned!
