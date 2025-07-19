@@ -1,0 +1,164 @@
+---
+title: "Solving Sudoku"
+description: "Algorithm to solve Sudoku and visualization"
+date: 2025-07-19
+---
+
+import BitwiseXorExample from "../../assets/images/bitwise-xor-example.svg";
+import { SudokuSolverVisualization } from "../../components/SudokuSolverVisualization";
+
+In this week blog post, I decided to continue the Sudoku topic from a previous week. If you haven't read it, check it out [here](/blog/sudoku-verification).
+
+But this time I decided to tackle a harder problem: hot to actually solve a Sudoku. Here's a LeetCode question that inspired me to write this blog post as well: [37. Sudoku Solver](https://leetcode.com/problems/sudoku-solver/description/)
+
+Let's take a look at how we can solve this problem step by step.
+
+## Backtracking
+
+The main idea behind a solution is [backtracking](https://en.wikipedia.org/wiki/Backtracking). We'll iterate over all of the empty cells on the board. For every such cell we can choose a number from 1 to 9. But, when choosing number for one cell, it limits numbers that we can choose for the next cell in the same row, column, and box. After choosing, we can proceed to the next empty cell and see if it satisfies all of the constraint (remember that we need to ensure that every row, column and box contain numbers from 1 to 9 without repetition). If we cannot satisfy our constraints, revert our choice and try the next number. When we successfully filled the last empty cell - that means we've solved a Sudoku!
+
+Ok, that's our algorithm outlined pretty much. Now, let's dig deeper into implementation details.
+
+Just like in the previous blog post where we've implemented Sudoku verification, we need to store state of the Sudoku. Let's implement it with bitmasks, and we already have almost everything that we need: checking of a specific bit, setting of a specific bit. But we need to implement one more operation: removal of a bit in a number.
+
+And for that, another bitwise operation exists: [Bitwise XOR (^)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Bitwise_XOR).
+
+Here's how it works:
+
+<BitwiseXorExample class="mx-auto max-w-[421px]" />
+
+Honestly, XOR is so coll, just take a look at this article on what is possible with it: [That XOR Trick](https://florian.github.io/xor-trick/). This literally blew my mind 🤯
+
+I've also decided to refactor a separate class for storing our Sudoku state, here's how it looks:
+
+```typescript
+class SudokuState {
+  #rows: Uint16Array;
+  #cols: Uint16Array;
+  #boxes: Uint16Array;
+
+  constructor() {
+    this.#rows = new Uint16Array(9);
+    this.#cols = new Uint16Array(9);
+    this.#boxes = new Uint16Array(9);
+  }
+
+  #boxIndex(row: number, col: number): number {
+    return Math.trunc(row / 3) * 3 + Math.trunc(col / 3);
+  }
+
+  canPlace(row: number, col: number, num: number): boolean {
+    const box = this.#boxIndex(row, col);
+    const mask = 1 << (num - 1);
+
+    return !(
+      this.#rows[row] & mask ||
+      this.#cols[col] & mask ||
+      this.#boxes[box] & mask
+    );
+  }
+
+  place(row: number, col: number, num: number) {
+    const box = this.#boxIndex(row, col);
+    const mask = 1 << (num - 1);
+
+    this.#rows[row] |= mask;
+    this.#cols[col] |= mask;
+    this.#boxes[box] |= mask;
+  }
+
+  remove(row: number, col: number, num: number) {
+    const box = this.#boxIndex(row, col);
+    const mask = 1 << (num - 1);
+
+    this.#rows[row] ^= mask;
+    this.#cols[col] ^= mask;
+    this.#boxes[box] ^= mask;
+  }
+}
+```
+
+Here, I've encapsulated box index calculation, and the arrays that store the state itself, and in my opinion, it turned out to be pretty nice interface. If you're wondering what all of these hashes are, I've also written a [blog post](/blog/typescript-vs-javascript-private) about it 😉
+
+Let's now connect all the dots, and implement algorithm itself:
+
+```typescript
+const EMPTY = ".";
+
+function solveSudoku(board: string[][]): void {
+  const sudokuState = new SudokuState();
+  const empty: [number, number][] = [];
+
+  for (let row = 0; row < 9; ++row) {
+    for (let col = 0; col < 9; ++col) {
+      if (board[row][col] === EMPTY) {
+        empty.push([row, col]);
+        continue;
+      }
+
+      sudokuState.place(row, col, parseInt(board[row][col]));
+    }
+  }
+
+  function backtrack(index: number): boolean {
+    if (index === empty.length) return true;
+
+    const [row, col] = empty[index];
+
+    for (let num = 1; num <= 9; ++num) {
+      if (!sudokuState.canPlace(row, col, num)) {
+        continue;
+      }
+
+      sudokuState.place(row, col, num);
+      board[row][col] = num.toString();
+
+      if (backtrack(index + 1)) {
+        return true;
+      }
+
+      sudokuState.remove(row, col, num);
+      board[row][col] = EMPTY;
+    }
+
+    return false;
+  }
+
+  backtrack(0);
+}
+```
+
+In the first loop, I'm filling up both the `sudokuState` and `empty` cells array. And I've utilized a neat trick here: just pay the attention that `backtrack` function is defined inside of the `solveSudoku` function, not separately. By defining it this way, there's no need to pass around `board`, `sudokuState`, and `empty` on every recursive call. I'm only passing the current `index` of the array that I'm working on in the subsequent recursive calls. That's what I'm calling [closures](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures) for a rescue!
+
+## Visualization
+
+To better understand how this backtracking works, I've decided to build visualization for it.There's a GIF available on the Wikipedia page, that I've added a link earlier, but I decided to make it more interactive and have some fun while doing it.
+
+Here it is:
+
+<SudokuSolverVisualization client:load />
+
+In this visualization, there are 3 buttons available:
+
+- Start - it will solve the Sudoku puzzle, and start a solving animation
+- Reset - it will just reset the Sudoku board to it's initial state
+- Randomize board - will randomly select one of four boards that I've added for this visualizer
+
+Two of the boards available are easy preset and other two are of medium difficulty. It's really simple to distinguish between them - easy ones have less empty cells, and medium ones have more. So, unfortunately, there's no actual Sudoku board generation, but it's on my TODO list 😉
+
+After the puzzle is solved, each step that was performed during a algorithm execution will be shown until the board is filled completely.
+
+Now, go ahead - try it out! It's really fascinating to observe how backtracking works in action. I also want to point out that actual backtracking is more present on the medium boards.
+
+## Closing thoughts
+
+Solving Sudoku was a fun challenge for me. But at the same time it was a great way to explore algorithms, visualization, and problem-solving. Whether you’re into puzzles or programming (or both), building your own solver is an incredibly rewarding project.
+
+I want to note, that apart from backtracking solution that we've explored today, there are more optimized approaches. Here's a couple of them:
+
+- Donald Knuth's [DLX algorithm](https://en.wikipedia.org/wiki/Dancing_Links)
+- [Naked Single](http://sudopedia.enjoysudoku.com/Naked_Single.html)
+- [Minimum Remaining Values](https://www.alooba.com/skills/concepts/data-science/minimum-remaining-values/) heuristic
+- and, probably, even more...
+
+Leave a reaction and your comments below, and don't hesitate to share - the more people are consumed by Sudoku addiction - the better 😈. See you next week!
