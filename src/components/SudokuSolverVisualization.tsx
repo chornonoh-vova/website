@@ -2,65 +2,6 @@ import clsx from "clsx";
 import { Play, RotateCcw, Shuffle } from "lucide-react";
 import { useEffect, useState, type ComponentPropsWithRef } from "react";
 
-function Button({
-  className,
-  children,
-  ...rest
-}: ComponentPropsWithRef<"button">) {
-  return (
-    <button
-      className={clsx(
-        "inline-flex flex-row items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 shadow-xs hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800",
-        className,
-      )}
-      {...rest}
-    >
-      {children}
-    </button>
-  );
-}
-
-function SudokuBoard({
-  sudoku,
-  initialSudoku,
-  lastUpdated,
-}: {
-  sudoku: number[][];
-  initialSudoku: number[][];
-  lastUpdated: [number, number] | null;
-}) {
-  const [lastUpdatedRow, lastUpdatedCol] = lastUpdated ?? [-1, -1];
-
-  return (
-    <div className="grid grid-cols-[repeat(9,_32px)] grid-rows-[repeat(9,_32px)] place-items-stretch rounded-[8px] border border-neutral-400 shadow-md">
-      {sudoku.map((row, rowIdx) => {
-        return row.map((val, colIdx) => (
-          <div
-            key={`cell-${rowIdx}-${colIdx}`}
-            className={clsx(
-              "border-neutral-400 text-center first:rounded-tl-[7px] last:rounded-br-[7px]",
-              rowIdx === lastUpdatedRow &&
-                colIdx === lastUpdatedCol &&
-                "bg-neutral-200 dark:bg-neutral-700",
-              val !== 0 &&
-                sudoku[rowIdx][colIdx] === initialSudoku[rowIdx][colIdx] &&
-                "font-semibold",
-              rowIdx === 0 && colIdx === 8 && "rounded-tr-[7px]",
-              rowIdx === 8 && colIdx === 0 && "rounded-bl-[7px]",
-              colIdx % 3 === 0 ? "border-r border-l" : "border-r",
-              colIdx === 8 && "border-r",
-              rowIdx % 3 === 0 ? "border-t border-b" : "border-b",
-              rowIdx === 8 && "border-b",
-            )}
-          >
-            {val === 0 ? <span className="sr-only">empty</span> : val}
-          </div>
-        ));
-      })}
-    </div>
-  );
-}
-
 class SudokuState {
   #rows: Uint16Array;
   #cols: Uint16Array;
@@ -199,6 +140,65 @@ const initialSudokuBoards = [
     [2, 0, 5, 0, 0, 0, 0, 6, 4],
   ],
 ];
+
+function Button({
+  className,
+  children,
+  ...rest
+}: ComponentPropsWithRef<"button">) {
+  return (
+    <button
+      className={clsx(
+        "inline-flex flex-row items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 shadow-xs hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800",
+        className,
+      )}
+      {...rest}
+    >
+      {children}
+    </button>
+  );
+}
+
+function SudokuBoard({
+  sudoku,
+  initialSudoku,
+  lastUpdated,
+}: {
+  sudoku: number[][];
+  initialSudoku: number[][];
+  lastUpdated: [number, number] | null;
+}) {
+  const [lastUpdatedRow, lastUpdatedCol] = lastUpdated ?? [-1, -1];
+
+  return (
+    <div className="grid grid-cols-[repeat(9,_32px)] grid-rows-[repeat(9,_32px)] place-items-stretch rounded-[8px] border border-neutral-400 shadow-md">
+      {sudoku.map((row, rowIdx) => {
+        return row.map((val, colIdx) => (
+          <div
+            key={`cell-${rowIdx}-${colIdx}`}
+            className={clsx(
+              "border-neutral-400 text-center first:rounded-tl-[7px] last:rounded-br-[7px]",
+              rowIdx === lastUpdatedRow &&
+                colIdx === lastUpdatedCol &&
+                "bg-neutral-200 dark:bg-neutral-700",
+              val !== 0 &&
+                sudoku[rowIdx][colIdx] === initialSudoku[rowIdx][colIdx] &&
+                "font-semibold",
+              rowIdx === 0 && colIdx === 8 && "rounded-tr-[7px]",
+              rowIdx === 8 && colIdx === 0 && "rounded-bl-[7px]",
+              colIdx % 3 === 0 ? "border-r border-l" : "border-r",
+              colIdx === 8 && "border-r",
+              rowIdx % 3 === 0 ? "border-t border-b" : "border-b",
+              rowIdx === 8 && "border-b",
+            )}
+          >
+            {val === 0 ? <span className="sr-only">empty</span> : val}
+          </div>
+        ));
+      })}
+    </div>
+  );
+}
 
 export function SudokuSolverVisualization() {
   const [initialIdx, setInitialIdx] = useState(0);

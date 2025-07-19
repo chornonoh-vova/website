@@ -9,13 +9,13 @@ import { SudokuSolverVisualization } from "../../components/SudokuSolverVisualiz
 
 In this week blog post, I decided to continue the Sudoku topic from a previous week. If you haven't read it, check it out [here](/blog/sudoku-verification).
 
-But this time I decided to tackle a harder problem: hot to actually solve a Sudoku. Here's a LeetCode question that inspired me to write this blog post as well: [37. Sudoku Solver](https://leetcode.com/problems/sudoku-solver/description/)
+But this time I decided to tackle a harder problem: how to actually solve a Sudoku. Here's a LeetCode question that inspired me to write this blog post as well: [37. Sudoku Solver](https://leetcode.com/problems/sudoku-solver/description/)
 
 Let's take a look at how we can solve this problem step by step.
 
 ## Backtracking
 
-The main idea behind a solution is [backtracking](https://en.wikipedia.org/wiki/Backtracking). We'll iterate over all of the empty cells on the board. For every such cell we can choose a number from 1 to 9. But, when choosing number for one cell, it limits numbers that we can choose for the next cell in the same row, column, and box. After choosing, we can proceed to the next empty cell and see if it satisfies all of the constraint (remember that we need to ensure that every row, column and box contain numbers from 1 to 9 without repetition). If we cannot satisfy our constraints, revert our choice and try the next number. When we successfully filled the last empty cell - that means we've solved a Sudoku!
+The main idea behind a solution is [backtracking](https://en.wikipedia.org/wiki/Backtracking). We'll iterate over all of the empty cells on the board. For every such cell we can choose a number from 1 to 9. But, when choosing number for one cell, it limits numbers that we can choose for the next cell in the same row, column, and box. After choosing, we can proceed to the next empty cell and see if it satisfies all of the constraints (remember that we need to ensure that every row, column and box contain numbers from 1 to 9 without repetition). If we cannot satisfy our constraints, revert our choice and try the next number. When we successfully filled the last empty cell - that means we've solved a Sudoku!
 
 Ok, that's our algorithm outlined pretty much. Now, let's dig deeper into implementation details.
 
@@ -27,7 +27,7 @@ Here's how it works:
 
 <BitwiseXorExample class="mx-auto max-w-[421px]" />
 
-Honestly, XOR is so coll, just take a look at this article on what is possible with it: [That XOR Trick](https://florian.github.io/xor-trick/). This literally blew my mind 🤯
+Honestly, XOR is so cool, just take a look at this article on what is possible with it: [That XOR Trick](https://florian.github.io/xor-trick/). This literally blew my mind 🤯
 
 I've also decided to refactor a separate class for storing our Sudoku state, here's how it looks:
 
@@ -132,7 +132,7 @@ In the first loop, I'm filling up both the `sudokuState` and `empty` cells array
 
 ## Visualization
 
-To better understand how this backtracking works, I've decided to build visualization for it.There's a GIF available on the Wikipedia page, that I've added a link earlier, but I decided to make it more interactive and have some fun while doing it.
+To better understand how this backtracking works, I've decided to build visualization for it. There's a GIF available on the Wikipedia page, that I've added a link earlier, but I decided to make it more interactive and have some fun while doing it.
 
 Here it is:
 
