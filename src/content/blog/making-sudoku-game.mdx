@@ -9,11 +9,14 @@ import sudokuGameScreenshot from "../../assets/images/sudoku-game-screenshot.png
 import sudokuGameWin from "../../assets/images/sudoku-game-win.gif";
 
 Finally, after having an idea almost three weeks ago, I can write about making a simple Sudoku game from scratch!
+
+Try it live: https://chornonoh-vova.github.io/sudoku/
+
 It all began in this post - [Sudoku verification](/blog/sudoku-verification), where we've explored what Sudoku is 
 and various approaches that we can take to verify if it's correct.
 Then we stepped it up next week - [Solving Sudoku](/blog/solving-sudoku), where we explored backtracking and
 utilized it to solve the Sudoku, and built a fun visualization along the way.
-And this week, I'll walk you through how I built a simple Sudoku game combining all of algorithms and 
+And this week, I'll walk you through how I built a simple Sudoku game combining all the algorithms and 
 data structures into something fun!
 
 I built this game with React for UI, TypeScript because I enjoy its type safety, and Tailwind for styling.
@@ -26,7 +29,7 @@ Here's how it looks like:
   alt="Sudoku game screenshot"
 />
 
-The first time when you open the game, Sudoku puzzle is generated and stored into a local storage. And every time when you come back,
+The first time you open the game, Sudoku puzzle is generated and stored into a local storage. And every time when you come back,
 it's loaded back right from where you stopped - with all of the initial and manually filled out cells. Of course, you can also generate
 new puzzle - and this time I implemented proper generation, let me walk you through how it's done.
 
