@@ -13,11 +13,11 @@ It all began in this post - [Sudoku verification](/blog/sudoku-verification), wh
 and various approaches that we can take to verify if it's correct.
 Then we stepped it up next week - [Solving Sudoku](/blog/solving-sudoku), where we explored backtracking and
 utilized it to solve the Sudoku, and built a fun visualization along the way.
-And this week, I'll walk you through how I built a simple Sudoku game combining all of the algorithms and 
+And this week, I'll walk you through how I built a simple Sudoku game combining all of algorithms and 
 data structures into something fun!
 
 I built this game with React for UI, TypeScript because I enjoy its type safety, and Tailwind for styling.
-I've deployed it on the Github Pages, and made it a PWA so it can be installed right into the home screens.
+I've deployed it on the GitHub Pages, and made it a PWA so it can be installed right into the home screens.
 
 Here's how it looks like:
 
@@ -28,7 +28,7 @@ Here's how it looks like:
 
 The first time when you open the game, Sudoku puzzle is generated and stored into a local storage. And every time when you come back,
 it's loaded back right from where you stopped - with all of the initial and manually filled out cells. Of course, you can also generate
-new puzzle - and this time I implemented proper generation, let me walk you out how it's done.
+new puzzle - and this time I implemented proper generation, let me walk you through how it's done.
 
 ## Puzzle generation
 
@@ -85,7 +85,7 @@ function generateSolution(): number[][] {
 }
 ```
 
-This code is almost the same as the code that we wrote next week to solve a Sudoku. Biggest difference is that
+This code is almost the same as the code that we wrote last week to solve a Sudoku. Biggest difference is that
 here all of the numbers from 1 to 9 tried randomly, and `shuffle` function helps with that:
 
 ```typescript
@@ -188,7 +188,7 @@ function generatePuzzle(grid: number[][], minClues = 32) {
 
 As you can notice from a screenshot - there are two buttons that allow you to undo your most recent moves and redo them back.
 It's a very simple concept - I'm sure you've seen it in another pieces of software a lot. And when implementing it, I found
-that linked list - data structure often criticized for it's inefficiency - is perfect for this task! Let's take a look at how
+that linked list - data structure often criticized for its inefficiency - is perfect for this task! Let's take a look at how
 I implemented moves history:
 
 ```typescript
