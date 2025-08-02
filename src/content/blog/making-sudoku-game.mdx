@@ -12,11 +12,11 @@ Finally, after having an idea almost three weeks ago, I can write about making a
 
 Try it live: https://chornonoh-vova.github.io/sudoku/
 
-It all began in this post - [Sudoku verification](/blog/sudoku-verification), where we've explored what Sudoku is 
+It all began in this post - [Sudoku verification](/blog/sudoku-verification), where we've explored what Sudoku is
 and various approaches that we can take to verify if it's correct.
 Then we stepped it up next week - [Solving Sudoku](/blog/solving-sudoku), where we explored backtracking and
 utilized it to solve the Sudoku, and built a fun visualization along the way.
-And this week, I'll walk you through how I built a simple Sudoku game combining all the algorithms and 
+And this week, I'll walk you through how I built a simple Sudoku game combining all the algorithms and
 data structures into something fun!
 
 I built this game with React for UI, TypeScript because I enjoy its type safety, and Tailwind for styling.
@@ -24,10 +24,7 @@ I've deployed it on the GitHub Pages, and made it a PWA so it can be installed r
 
 Here's how it looks like:
 
-<Image
-  src={sudokuGameScreenshot}
-  alt="Sudoku game screenshot"
-/>
+<Image src={sudokuGameScreenshot} alt="Sudoku game screenshot" />
 
 The first time you open the game, Sudoku puzzle is generated and stored into a local storage. And every time when you come back,
 it's loaded back right from where you stopped - with all of the initial and manually filled out cells. Of course, you can also generate
@@ -36,6 +33,7 @@ new puzzle - and this time I implemented proper generation, let me walk you thro
 ## Puzzle generation
 
 I've decided to take the following approach:
+
 1. Generate a fully filled out grid
 2. Randomly remove one cell
 3. Check if puzzle that remains has unique solution
@@ -151,7 +149,7 @@ function countSolutions(board: number[][]): number {
 ```
 
 One little optimization that I did is that I return early, when encountering a second solution -
-there is no need to know *exactly* how many solutions there are - it is enough to know that there is more than one.
+there is no need to know _exactly_ how many solutions there are - it is enough to know that there is more than one.
 
 With all of the pieces in place, here's a main routine to generate a puzzle:
 
@@ -292,4 +290,3 @@ And you can play the game by yourself here: https://chornonoh-vova.github.io/sud
   height={sudokuGameWin.height}
   alt="Fireworks displaying when winning a Sudoku game"
 />
-

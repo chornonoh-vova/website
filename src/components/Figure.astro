@@ -1,0 +1,21 @@
+---
+import type { HTMLAttributes } from "astro/types";
+
+interface Props extends HTMLAttributes<"figure"> {
+  caption: string;
+}
+
+const { caption, ...rest } = Astro.props;
+---
+
+<figure
+  class="rounded-sm border border-neutral-200 dark:border-neutral-700"
+  {...rest}
+>
+  <slot />
+  <figcaption
+    class="border-t border-neutral-200 text-center dark:border-neutral-700"
+  >
+    {caption}
+  </figcaption>
+</figure>

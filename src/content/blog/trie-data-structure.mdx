@@ -1,0 +1,232 @@
+---
+title: "Trie data structure"
+description: "Deep dive into what trie is and its applications"
+date: 2025-08-02
+---
+
+import Figure from "../../components/Figure.astro";
+
+import DictionaryArrayExample from "../../assets/images/dictionary-array-example.svg";
+import DictionaryHashmapExample from "../../assets/images/dictionary-hashmap-example.svg";
+import TrieExample from "../../assets/images/trie-example.svg";
+
+Let's start with the practical task: imagine that you're given a large dictionary
+and you need to implement an auto-complete.
+
+There are a couple of operations that we need to implement:
+
+- `insert` - adds a new word to a dictionary
+- `search` - returns `true` if the _whole_ word is present in the dictionary
+- `startsWith` - returns `true` if some word in the dictionary starts with prefix
+
+Here's an example set of words in a dictionary:
+
+```txt
+gone
+good
+goal
+god
+golf
+gold
+gum
+gun
+```
+
+What data structure would you choose?
+
+## Arrays
+
+Surely, the title gives it away - trie. But let's build up an intuition
+for why that is from the ground up. The simplest thing we can do is to use just a
+plain array.
+
+Let's estimate a [**time complexity**](https://en.wikipedia.org/wiki/Time_complexity)
+of every operation:
+
+- `insert` - we can always insert a new word at the end of the array, thus giving
+  us an _O(1)_ complexity. Of course, when inserting a new element, a resize can happen.
+  But most of the time, the insertion will just insert it into an empty cell, this is
+  known as _amortized constant time_.
+- `search` - for this operation, we need to go through the entirety of the array,
+  comparing each word in the dictionary with our target word. Remember, that to find
+  out if the two strings are equal, we need to compare every character. So the time
+  complexity of this operation will be _O(N•M)_ where _N_ is a number of words in a
+  dictionary and _M_ is the length of the target word.
+- `startsWith` - this operation will actually have the same time complexity as a
+  `search`, because again, we need to go through entire array and compare every word
+  with prefix, so _O(N•M)_ where _N_ is a number of words and _M_ is the length of the
+  prefix.
+
+<Figure caption="Dictionary example based on array">
+  <DictionaryArrayExample class="mx-auto max-w-[350px]" />
+</Figure>
+
+How can we improve a runtime of these operations?
+
+## Hash Map
+
+Another approach that comes to mind, is to pick a hash map as our data structure. Let's
+see how the time complexities of operations compare:
+
+- `insert` - stays _O(1)_ - because insertion into the hash map just involves hash code
+  calculation and insertion into the appropriate cell (there can be
+  [hash collisions](https://en.wikipedia.org/wiki/Hash_collision), and multiple way to
+  resolve them, but its a topic for another blog post 😉)
+- `search` - it can be improved to become _O(1)_!, because now we don't need to compare
+  every word in a dictionary, we can just calculate the hash code once for a target word
+  and look up whether our hash map has this word or not. Neat!
+- `startsWith` - unfortunately, though this one stays _O(N•M)_, that's because hash maps
+  do not support partial key matches, and we still need to compare every word in a
+  dictionary with a prefix.
+
+<Figure caption="Dictionary example based on hash map">
+  <DictionaryHashmapExample class="mx-auto max-w-[400px]" />
+</Figure>
+
+But wait, what if we store not only words, but also all the possible prefixes in the hash
+map as well? This approach will indeed make the `search` and `startsWith` operations _O(1)_,
+but now the `insert` will take _O(M)_ - where _M_ is a length of the word that we're
+inserting. There is a drawback, though - we've significantly inflated our memory usage.
+
+Is there an approach that we could take that will have balance in runtime performance and
+memory usage?
+
+## Trie
+
+Indeed, there is. And the data structure that we can use is called [trie](https://en.wikipedia.org/wiki/Trie)
+(or prefix tree). This kind of tree is special in the fact, that instead of storing values
+in nodes, it stores only one character (and marker for the end of the word).
+
+<Figure caption="Dictionary example based on trie">
+  <TrieExample class="mx-auto max-w-[540px]" />
+</Figure>
+
+In the example above, `#` symbol marks a root node, and nodes marked yellow represent the
+end of the word. Let's analyze time
+complexities of our required operations.
+
+- `insert` - to insert a new word, for example _gulf_ we need to follow nodes from the root
+  `# -> G -> U` and then insert the remaining ones as we go. Therefore insertion complexity is
+  _O(M)_
+- `search` - the same approach is working here, we follow character-by-character from the root,
+  returning early if we encounter a node with no children and checking if the final node that we
+  reached is indeed marks end of the word. Time complexity is also _O(M)_.
+- `startsWith` - we can absolutely apply the same approach as in search, and this time we don't
+  even need to check if we've reached the end of the word in the end! And time complexity remains
+  _O(M)_!
+
+As you can see, we've achieved balance in all of our operations.
+
+When it's time to pick a data structure, you always need to think about a trade-offs,
+here’s a quick summary of how each approach compares in terms of time complexity and memory:
+
+| Data structure              | `insert` | `search`  | `startsWith` | Memory overhead    |
+| --------------------------- | -------- | --------- | ------------ | ------------------ |
+| Array                       | O(1) ✅  | O(N•M) ❌ | O(N•M) ❌    | Minimal            |
+| Hash map (words)            | O(1) ✅  | O(1) ✅   | O(N•M) ❌    | Medium             |
+| Hash map (words + prefixes) | O(M) 👍  | O(1) ✅   | O(1) ✅      | Big                |
+| Trie                        | O(M) 👍  | O(M) 👍   | O(M) 👍      | From Big to Medium |
+
+Where _N_ = number of words, _M_ = average word length
+
+## Implementation
+
+To implement trie, we first need a class that represents a node:
+
+```typescript
+class TrieNode {
+  children: Array<TrieNode | null>;
+  end: boolean;
+
+  constructor() {
+    this.children = new Array(26).fill(null);
+    this.end = false;
+  }
+}
+```
+
+This is where we decide what memory overhead we'll have - big or medium.
+I've chosen an array where each index will we either null or node, and it will point to
+next character in a word. Another option could be to have hash map where each key will be
+a character and value will be a pointer to the next node.
+
+With that done, we can now assemble our trie:
+
+```typescript
+class Trie {
+  #root: TrieNode;
+
+  constructor() {
+    this.#root = new TrieNode();
+  }
+
+  insert(word: string): void {
+    let node = this.#root;
+
+    for (let i = 0; i < word.length; ++i) {
+      const idx = word.charCodeAt(i) - 97;
+      if (node.children[idx] === null) {
+        node.children[idx] = new TrieNode();
+      }
+      node = node.children[idx];
+    }
+
+    node.end = true;
+  }
+
+  search(word: string): boolean {
+    const node = this.#prefix(word);
+    return node !== null && node.end;
+  }
+
+  startsWith(prefix: string): boolean {
+    const node = this.#prefix(prefix);
+    return node !== null;
+  }
+
+  #prefix(word: string): TrieNode | null {
+    let node = this.#root;
+
+    for (let i = 0; i < word.length; ++i) {
+      const idx = word.charCodeAt(i) - 97;
+      if (node.children[idx] === null) {
+        return null;
+      }
+      node = node.children[idx];
+    }
+
+    return node;
+  }
+}
+```
+
+The `insert` method walks through the tree and inserts new nodes along the way.
+The `#prefix` method also walks through the tree but short-circuits when the
+next node is null and returns the node at the end. `search` and `startsWith` are
+neatly implemented with just using `#prefix` method, because, in the end the only
+difference in their result is to check whether we reached the end of the word or not.
+
+Try to implement it yourself on LeetCode:
+[208. Implement Trie (Prefix Tree)](https://leetcode.com/problems/implement-trie-prefix-tree/)
+
+## Disadvantages
+
+Imagine, that we have only two words in our dictionary: _database_ and _document_.
+While these words share the first letter, all other letters are different.
+In this case, while still maintaining the runtime performance characteristics, trie
+becomes very wasteful in memory (especially if it's using full arrays in nodes).
+To combat this, there are a couple of compression techniques existing:
+
+- [Radix trees](https://en.wikipedia.org/wiki/Radix_tree) which implements a very
+  simple idea - storing the entire suffix in the leaf nodes. The edges can also be
+  labeled with sequences of characters instead of only one - which can really help
+  if dictionary has a lot of common substrings in the middle.
+- Bitwise and Patricia trees - [Wikipedia](https://en.wikipedia.org/wiki/Trie#Implementation_strategies)
+
+## Conclusion
+
+Wrapping up, while tries have a very specific use cases, I found them particularly interesting
+to reason about. And I hope that this blog post built up some intuition about them.
+So I hope that the next time when you encounter an algorithmic task of auto-complete,
+spell checking or even [IP routing 😮](https://en.wikipedia.org/wiki/Longest_prefix_match),
+you'll have one more powerful tool in your toolkit to solve it!
