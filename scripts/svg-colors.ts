@@ -11,6 +11,7 @@ const replacements = [
   [/fill="#1971c2"/g, 'class="fill-blue-600"'],
   [/fill="#9c36b5"/g, 'class="fill-fuchsia-600"'],
   [/stroke="#9c36b5"/g, 'class="stroke-fuchsia-600"'],
+  [/fill="#ffec99"/g, 'class="fill-yellow-200 dark:fill-yellow-700"'],
 ] as const;
 
 const filename = argv[2];
