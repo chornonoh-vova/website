@@ -28,7 +28,7 @@
     "@vercel/speed-insights": "^1.2.0",
     "astro": "^5.12.8",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.536.0",
+    "lucide-react": "^0.539.0",
     "motion": "^12.23.12",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
