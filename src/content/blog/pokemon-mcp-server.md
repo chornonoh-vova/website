@@ -247,11 +247,11 @@ export async function getPokemonList(): Promise<string[] | null> {
 }
 ```
 
-Again, I'm calling and API, parsing with `zod`, and mapping over the results to
+Again, I'm calling an API, parsing with `zod`, and mapping over the results to
 return only the names of all Pokémon. I've cheated a little bit here: I've used
 an enormous limit in the request, just to make sure that I get all the Pokémon
-on one request. On production, though, it's better to implement a proper pagination
-or caching.
+on one request. In production, though, it's better to implement a proper pagination
+and/or caching.
 
 ## Tools
 
