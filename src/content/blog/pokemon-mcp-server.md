@@ -1,5 +1,5 @@
 ---
-title: "Pokemon MCP server"
+title: "Pokémon MCP server"
 description: "Exploring what MCP is and building MCP server for fun"
 date: 2025-08-16
 ---
@@ -13,23 +13,23 @@ that can benefit a product.
 
 One of the biggest advancements recently is MCP. What is MCP you ask? This abbreviation
 stands for **Model Context Protocol**. From the technical side, it's just a standardized
-JSON schema. But from non-technical side it's and important milestone in the development
+JSON schema. But from non-technical side it's an important milestone in the development
 of AI as a whole - now every AI provider (such as OpenAI, Anthropic or Alphabet)
 wouldn't need to reinvent the wheel. Customers, such as you and me, also benefit
 from it: we receive a standard way for our tools to communicate. Just imagine all
 of the cool possibilities that can be achieved here!
 
 So on the previous weekend I built a small proof-of-concept MCP server for our
-project. Even though, it was tiny, but from my point of view, it shed a little
+project. Even though it was tiny, from my point of view, it shed a little
 bit of light on what can be potentially done in the future. Unfortunately, I cannot
 share the details of this MCP server that I built at my work, but what I can do for
 a blog - is to build another one!
 
-## Pokemon API
+## Pokémon API
 
 There's this nice public API called [PokeAPI](https://pokeapi.co/), that contains
-an enormous amount of Pokemon data, accessible via free & open-source RESTful API.
-Let's build an MCP server so our AI could answer some questions about Pokemons!
+an enormous amount of Pokémon data, accessible via free & open-source RESTful API.
+Let's build an MCP server so our AI could answer some questions about Pokémon!
 
 ## Setup
 
@@ -73,7 +73,7 @@ server.registerTool(
 try {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("Pokemon MCP Server running on stdio");
+  console.error("Pokémon MCP Server running on stdio");
 } catch (error) {
   console.error("Fatal error:", error);
   process.exit(1);
@@ -89,14 +89,14 @@ approach with separate tool files makes the codebase easier to maintain and exte
 
 For this little fun project, I've created 2 tools:
 
-- `get_pokemon`, that returns an information about some Pokemon
-- `get_random_pokemon`, that gets a list of all Pokemon, and randomly selects and
+- `get_pokemon`, that returns an information about some Pokémon
+- `get_random_pokemon`, that gets a list of all Pokémon, and randomly selects and
   returns information about one of them
 
 ## API Client
 
 Let's look at how API client is setup. It is utilizing native Node.js fetch, and
-a function to call Pokemon API is pretty simple:
+a function to call Pokémon API is pretty simple:
 
 ```ts
 const BASE_URL = "https://pokeapi.co/api/v2/";
@@ -137,7 +137,7 @@ export async function pokeAPIRequest<T>(
 
 ## Data processing
 
-Here's a utility module that requests information about a Pokemon by name, and
+Here's a utility module that requests information about a Pokémon by name, and
 returns formatted representation:
 
 ```ts
@@ -213,11 +213,11 @@ export async function getPokemon(name: string): Promise<string | null> {
 }
 ```
 
-There I've utilized `zod` to parse and verify schema that I've getting from the API.
+There I've used `zod` to parse and verify schema that I've getting from the API.
 Also, this schema is not full, I've just specified fields that I'm actually using
 when formatting information.
 
-Here's a utility module that gets list of all Pokemon's:
+Here's a utility module that gets list of all Pokémon:
 
 ```ts
 import { z } from "zod";
@@ -248,8 +248,8 @@ export async function getPokemonList(): Promise<string[] | null> {
 ```
 
 Again, I'm calling and API, parsing with `zod`, and mapping over the results to
-return only the names of all Pokemon's. I've cheated a little bit here: I've used
-an enormous limit in the request, just to make sure that I get all the Pokemon's
+return only the names of all Pokémon. I've cheated a little bit here: I've used
+an enormous limit in the request, just to make sure that I get all the Pokémon
 on one request. On production, though, it's better to implement a proper pagination
 or caching.
 
@@ -380,29 +380,33 @@ about our MCP server. Here's the configuration for the Claude:
 ```
 
 Replace the path with your actual compiled JavaScript location. After restarting
-Claude Desktop, you should see the Pokemon tools available in the interface.
-And now is the perfect time to test out and ask a couple of questions about Pokemon's!
+Claude Desktop, you should see the Pokémon tools available in the interface.
+Now is the perfect time to test out and ask a couple of questions about Pokémon!
 
 ## Results
 
 Here's how we can discover some random pokemon:
 
-![Pokemon MCP random pokemon information](../../assets/images/pokemon-mcp-random.png)
+![Pokémon MCP random pokemon information](../../assets/images/pokemon-mcp-random.png)
 
 Or, we can compare stats of two pokemons, and find out, for example, who is faster:
 
-![Pokemon MCP Pikachu vs Ditto speed comparison](../../assets/images/pokemon-mcp-pikachu-vs-ditto.png)
+![Pokémon MCP Pikachu vs Ditto speed comparison](../../assets/images/pokemon-mcp-pikachu-vs-ditto.png)
 
 Or, we can ask about stats of multiple pokemons separately, and Claude will remember
 the information that our tools provided, and won't need to request for it again!
 
-![Pokemon MCP Pikachu vs Ditto height comparison](../../assets/images/pokemon-mcp-abilities.png)
+![Pokémon MCP Pikachu vs Ditto height comparison](../../assets/images/pokemon-mcp-abilities.png)
 
 ## Conclusions
 
 That was a really fun way to learn about MCP, and gain a hands-on experience of building
 one myself. While it's really simple, in my opinion it can provide an important lessons
-on how this new technology works, and what possibilities it opens up for us. I hope
-it was fun for you too! As always, full source code for the server is available in
-this [repository](https://github.com/chornonoh-vova/pokemon-mcp-server). Try building
+on how this new technology works, and what possibilities it opens up for us.
+
+This kind of integration means AI can work with any structured data source we expose,
+making assistants far more capable.
+
+I hope it was fun for you too! As always, full source code for the server is available
+in this [repository](https://github.com/chornonoh-vova/pokemon-mcp-server). Try building
 your own too - you might be surprised by what becomes possible!
