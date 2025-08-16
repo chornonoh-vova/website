@@ -1,40 +1,40 @@
 ---
 title: "Pokémon MCP server"
-description: "Exploring what MCP is and building MCP server for fun"
+description: "Exploring what MCP is and building an MCP server for fun"
 date: 2025-08-16
 ---
 
-The AI landscape is evolving rapidly. Undeniably, it's a remarkable piece of technology,
-and every product, seems like it, wants to have some AI-powered part. And my project
-at work is no exception, so I decided to take on an initiative and try to build something
-that can benefit a product.
+The AI landscape is evolving rapidly. It's a remarkable piece of technology,
+and it seems that every product wants to have some AI-powered part. My project
+at work is no exception, so I decided to take on an initiative and try to build
+something that could benefit a product.
 
 ## Enter MCP
 
 One of the biggest advancements recently is MCP. What is MCP you ask? This abbreviation
 stands for **Model Context Protocol**. From the technical side, it's just a standardized
-JSON schema. But from non-technical side it's an important milestone in the development
+JSON schema. But from the non-technical side it's an important milestone in the development
 of AI as a whole - now every AI provider (such as OpenAI, Anthropic or Alphabet)
 wouldn't need to reinvent the wheel. Customers, such as you and me, also benefit
 from it: we receive a standard way for our tools to communicate. Just imagine all
 of the cool possibilities that can be achieved here!
 
-So on the previous weekend I built a small proof-of-concept MCP server for our
-project. Even though it was tiny, from my point of view, it shed a little
+Over the weekend I built a small proof-of-concept MCP server for our project.
+Even though it was tiny, from my point of view, it shed a little
 bit of light on what can be potentially done in the future. Unfortunately, I cannot
-share the details of this MCP server that I built at my work, but what I can do for
+share the details of this MCP server from work, but what I can do for
 a blog - is to build another one!
 
 ## Pokémon API
 
 There's this nice public API called [PokeAPI](https://pokeapi.co/), that contains
 an enormous amount of Pokémon data, accessible via free & open-source RESTful API.
-Let's build an MCP server so our AI could answer some questions about Pokémon!
+Let's build an MCP server so our AI can answer some questions about Pokémon!
 
 ## Setup
 
 I built an MCP server with Node.js and TypeScript, but it can also be built with
-Python, Java, Kotlin or C#. For more information take a look at this [quickstart](https://modelcontextprotocol.io/quickstart/server).
+Python, Java, Kotlin, or C#. For more information, take a look at this [quickstart](https://modelcontextprotocol.io/quickstart/server).
 
 As far as dependencies go, we'll only need two:
 
@@ -81,7 +81,7 @@ try {
 ```
 
 Here, I'm setting up a basic MCP server (using stdio transport), and registering
-all of the tools.
+all the tools.
 
 The stdio transport is key here. It allows MCP clients like Claude Desktop to
 communicate with our server through standard input/output streams. This modular
@@ -95,7 +95,7 @@ For this little fun project, I've created 2 tools:
 
 ## API Client
 
-Let's look at how API client is setup. It is utilizing native Node.js fetch, and
+Let's look at how API client is set up. It uses the native Node.js fetch API, and
 a function to call Pokémon API is pretty simple:
 
 ```ts
@@ -187,7 +187,7 @@ function formatStat(name: string, stat: number) {
 
 export function formatPokemon(pokemon: Pokemon) {
   return [
-    `Pokemon ${pokemon.name}:\n`,
+    `Pokémon ${pokemon.name}:\n`,
     ` - weight: ${pokemon.weight}`,
     ` - height: ${pokemon.height}`,
     ` - abilities: ${pokemon.abilities
@@ -214,8 +214,8 @@ export async function getPokemon(name: string): Promise<string | null> {
 ```
 
 There I've used `zod` to parse and verify schema that I've getting from the API.
-Also, this schema is not full, I've just specified fields that I'm actually using
-when formatting information.
+Also, this schema is not exhaustive; I've specified only the fields that I'm actually
+using when formatting the information.
 
 Here's a utility module that gets list of all Pokémon:
 
@@ -373,7 +373,7 @@ about our MCP server. Here's the configuration for the Claude:
   "mcpServers": {
     "pokemon": {
       "command": "node",
-      "args": ["/Users/volodymyr.chornonoh/Personal/pokemon/dist/index.js"]
+      "args": ["/path/to/pokemon/dist/index.js"]
     }
   }
 }
@@ -385,24 +385,24 @@ Now is the perfect time to test out and ask a couple of questions about Pokémon
 
 ## Results
 
-Here's how we can discover some random pokemon:
+Here's how we can discover some random Pokémon:
 
-![Pokémon MCP random pokemon information](../../assets/images/pokemon-mcp-random.png)
+![Pokémon MCP random Pokémon information](../../assets/images/pokemon-mcp-random.png)
 
-Or, we can compare stats of two pokemons, and find out, for example, who is faster:
+Or, we can compare stats of two Pokémon, and find out, for example, who is faster:
 
 ![Pokémon MCP Pikachu vs Ditto speed comparison](../../assets/images/pokemon-mcp-pikachu-vs-ditto.png)
 
-Or, we can ask about stats of multiple pokemons separately, and Claude will remember
+Or, we can ask about stats of multiple Pokémon separately, and Claude will remember
 the information that our tools provided, and won't need to request for it again!
 
 ![Pokémon MCP Pikachu vs Ditto height comparison](../../assets/images/pokemon-mcp-abilities.png)
 
 ## Conclusions
 
-That was a really fun way to learn about MCP, and gain a hands-on experience of building
-one myself. While it's really simple, in my opinion it can provide an important lessons
-on how this new technology works, and what possibilities it opens up for us.
+That was a fun way to learn about MCP and gain hands-on experience building one myself.
+While it's simple, it can provide important lessons about how this new technology
+works and what possibilities it opens up.
 
 This kind of integration means AI can work with any structured data source we expose,
 making assistants far more capable.
