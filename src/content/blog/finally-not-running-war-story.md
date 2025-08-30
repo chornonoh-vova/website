@@ -59,10 +59,10 @@ where threads can be abruptly stopped, this situation is more common.
 
 ### Problems with code itself
 
-There can be a problems with a code itself, for example, infinite loops in the
+There can be problems with a code itself, for example, infinite loops in the
 try or catch blocks. Naturally, this would prevent a `finally` block from executing.
 
-Another problem that can arise is with deleting file itself: the `delete()` method
+Another problem that can arise is with deleting the file itself: the `delete()` method
 of the `File` can return false if file cannot be deleted (for example, when some
 other process is blocking deletion). Or the `SecurityManager` in JVM might block
 file deletion if it's not allowed.
