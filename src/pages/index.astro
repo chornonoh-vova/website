@@ -5,11 +5,11 @@ import { SITE_DESCRIPTION } from "../constants";
 import { allBlogPosts } from "../lib/posts";
 import Link from "../components/Link.astro";
 import PostCard from "../components/PostCard.astro";
-import GitHubLight from "../assets/icons/github_light.svg";
-import GitHubDark from "../assets/icons/github_dark.svg";
+import GitHubLight from "../assets/icons/github_light.svg?url";
+import GitHubDark from "../assets/icons/github_dark.svg?url";
 import LinkedIn from "../assets/icons/linkedin.svg";
-import ThreadsLight from "../assets/icons/threads_light.svg";
-import ThreadsDark from "../assets/icons/threads_dark.svg";
+import ThreadsLight from "../assets/icons/threads_light.svg?url";
+import ThreadsDark from "../assets/icons/threads_dark.svg?url";
 import Rss from "../assets/icons/rss.svg";
 
 const recentBlogs = (await allBlogPosts()).slice(0, 3);
@@ -34,20 +34,9 @@ const rssUrl = new URL("rss.xml", Astro.site);
     <div class="flex flex-wrap gap-2">
       <IconLink href="https://github.com/chornonoh-vova">
         <picture>
-          <source
-            srcset={GitHubLight.src}
-            media="(prefers-color-scheme: light)"
-          />
-          <source
-            srcset={GitHubDark.src}
-            media="(prefers-color-scheme: dark)"
-          />
-          <img
-            width={18}
-            height={18}
-            src={GitHubLight.src}
-            role="presentation"
-          />
+          <source srcset={GitHubLight} media="(prefers-color-scheme: light)" />
+          <source srcset={GitHubDark} media="(prefers-color-scheme: dark)" />
+          <img width={18} height={18} src={GitHubLight} role="presentation" />
         </picture>
         GitHub
       </IconLink>
@@ -57,20 +46,9 @@ const rssUrl = new URL("rss.xml", Astro.site);
       </IconLink>
       <IconLink href="https://www.threads.com/@volodymyrchornonoh">
         <picture>
-          <source
-            srcset={ThreadsLight.src}
-            media="(prefers-color-scheme: light)"
-          />
-          <source
-            srcset={ThreadsDark.src}
-            media="(prefers-color-scheme: dark)"
-          />
-          <img
-            width={18}
-            height={18}
-            src={ThreadsLight.src}
-            role="presentation"
-          />
+          <source srcset={ThreadsLight} media="(prefers-color-scheme: light)" />
+          <source srcset={ThreadsDark} media="(prefers-color-scheme: dark)" />
+          <img width={18} height={18} src={ThreadsLight} role="presentation" />
         </picture>
         Threads
       </IconLink>
