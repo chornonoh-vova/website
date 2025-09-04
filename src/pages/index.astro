@@ -13,6 +13,7 @@ import ThreadsDark from "../assets/icons/threads_dark.svg";
 import Rss from "../assets/icons/rss.svg";
 
 const recentBlogs = (await allBlogPosts()).slice(0, 3);
+const rssUrl = new URL("rss.xml", Astro.site);
 ---
 
 <Layout title="Home" description={SITE_DESCRIPTION}>
@@ -41,12 +42,17 @@ const recentBlogs = (await allBlogPosts()).slice(0, 3);
             srcset={GitHubDark.src}
             media="(prefers-color-scheme: dark)"
           />
-          <img width={18} height={18} src={GitHubLight.src} />
+          <img
+            width={18}
+            height={18}
+            src={GitHubLight.src}
+            role="presentation"
+          />
         </picture>
         GitHub
       </IconLink>
       <IconLink href="https://www.linkedin.com/in/volodymyr-chornonoh/">
-        <LinkedIn width={18} height={18} />
+        <LinkedIn width={18} height={18} role="presentation" />
         LinkedIn
       </IconLink>
       <IconLink href="https://www.threads.com/@volodymyrchornonoh">
@@ -59,12 +65,22 @@ const recentBlogs = (await allBlogPosts()).slice(0, 3);
             srcset={ThreadsDark.src}
             media="(prefers-color-scheme: dark)"
           />
-          <img width={18} height={18} src={ThreadsLight.src} />
+          <img
+            width={18}
+            height={18}
+            src={ThreadsLight.src}
+            role="presentation"
+          />
         </picture>
         Threads
       </IconLink>
-      <IconLink href={new URL("rss.xml", Astro.site)}>
-        <Rss width={18} class="stroke-orange-600" />
+      <IconLink href={rssUrl}>
+        <Rss
+          width={18}
+          height={18}
+          class="stroke-orange-600"
+          role="presentation"
+        />
         RSS
       </IconLink>
     </div>
