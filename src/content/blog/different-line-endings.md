@@ -4,7 +4,7 @@ description: "A quick guide to line endings across operating systems"
 date: 2025-09-06
 ---
 
-How often do you have a file uploads in your applications? Did you know that very
+How often do you handle file uploads in your applications? Did you know that very
 subtle bugs might be hiding in the code that processes them? Let's take a look at
 why.
 
@@ -161,5 +161,20 @@ const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 };
 ```
 
-The regex in the last example is treating `CRLF` as a single delimiter, and handles
-`LF`-only and `CR`-only files.
+The regex in the last example is able to handle all 3 scenarios: it is treating
+`CRLF` as a single delimiter, and handles `LF`-only and `CR`-only lines.
+
+## Wrapping up
+
+Line endings may seem like a small detail, but they can cause subtle bugs when
+dealing with uploaded files across different operating systems. I know it firsthand,
+unfortunately, when these subtle differences caught my code off guard 😅.
+
+To deal with these differences between files, you can choose one of two approaches
+that we explored today:
+
+- Normalization: transform all line endings to one common denominator.
+- Regex: change split logic to identify the 3 different line endings.
+
+I hope it was useful for you, at least when a file parsing bug pops up, you'll
+have an idea of what might have gone wrong 😉.
