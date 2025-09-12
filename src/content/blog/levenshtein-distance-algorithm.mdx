@@ -1,0 +1,215 @@
+---
+title: "Levenshtein distance algorithm"
+description: "How do computers understand that two words are similar?"
+date: 2025-09-13
+---
+
+import { Picture } from "astro:assets";
+
+import { LevenshteinVisualization } from "../../components/LevenshteinVisualization";
+
+import LevenshteinDistanceRecursiveFormula from "../../assets/images/levenshtein-distance-recursive-formula.png";
+
+This week, a crazy supply-chain attack on multiple NPM packages happened. It was
+so massive, targeting the most popular packages, that it is estimated to be downloaded
+1 billion times per week!
+
+Thankfully, the hack was identified quickly, and new, malware-free versions were
+published. If you are using these packages, I urge you to double-check whether
+you are affected or not. Here’s an excellent, detailed write-up on this matter:
+[Anatomy of a Billion-Download NPM Supply-Chain Attack](https://jdstaerk.substack.com/p/we-just-found-malicious-code-in-the)
+
+## How it's related
+
+You might be confused by the title of the blog post, and say: “Why does it have
+some algorithm in the title??” And I’ll tell you why: hackers were not inserting
+random Ethereum addresses into a confirmation field.
+
+They were relying heavily on human behavior: we tend to skim over a large string
+of digits & characters, and decide whether it’s “looks okay”. That’s where a
+terrifying reality hits: hackers used the Levenshtein distance algorithm to pick
+the most visually similar address in an attempt to fool users who aren’t paying
+enough attention to the exact address.
+
+## Legitimate use cases
+
+Of course, this algorithm wasn’t developed for this use case. The most popular,
+and thankfully, positive application of it is typo correction. Ever wondered how
+the writing software can pinpoint typos and suggest corrections? It’s just taking
+a large dictionary and calculating the Levenshtein distance between words; it can
+identify the closest one and suggest it to you. One more good example of usage is
+fuzzy searching: you don’t need to type the word fully and perfectly accurately
+(especially if it’s not in your native language) to find what you are looking for.
+
+That’s what disappointed me the most in this attack: how an example of human
+ingenuity can be used to do terrible things.
+
+Now, let’s take a step back from this disaster and look at the algorithm in more
+detail and how it can be implemented.
+
+## Definition
+
+By definition, [Levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance)
+is a metric of similarity between two strings:
+it is the minimum number of edits required to convert one string into another.
+These edits consist of single-character additions, removals, or replacements.
+Sometimes it’s referred to as edit distance, and actually, there is
+[72. Edit Distance](https://leetcode.com/problems/edit-distance/) question available
+on LeetCode, which essentially asks to implement the Levenshtein distance algorithm.
+
+This algorithm is a classic example of dynamic programming. It can be implemented
+by just following the recursive formula:
+
+<Picture
+  src={LevenshteinDistanceRecursiveFormula}
+  alt="Levenshtein distance recursive formula"
+/>
+
+## Recursive approach
+
+Here's how it can be implemented with recursive approach:
+
+```ts
+function minDistance(word1: string, word2: string): number {
+  function recursion(
+    word1: string,
+    word2: string,
+    word1Index: number,
+    word2Index: number,
+  ): number {
+    if (word1Index == 0) {
+      return word2Index;
+    }
+    if (word2Index == 0) {
+      return word1Index;
+    }
+    if (word1.charAt(word1Index - 1) == word2.charAt(word2Index - 1)) {
+      return recursion(word1, word2, word1Index - 1, word2Index - 1);
+    } else {
+      let insertOperation = recursion(word1, word2, word1Index, word2Index - 1);
+      let deleteOperation = recursion(word1, word2, word1Index - 1, word2Index);
+      let replaceOperation = recursion(
+        word1,
+        word2,
+        word1Index - 1,
+        word2Index - 1,
+      );
+      return (
+        Math.min(insertOperation, Math.min(deleteOperation, replaceOperation)) +
+        1
+      );
+    }
+  }
+  return recursion(word1, word2, word1.length, word2.length);
+}
+```
+
+The recursive calls can also be memoized to avoid redundant computations.
+
+```ts
+function minDistance(word1: string, word2: string): number {
+  let memo: number[][] = Array.from({ length: word1.length + 1 }, () =>
+    Array(word2.length + 1).fill(null),
+  );
+  function recursion(
+    word1: string,
+    word2: string,
+    word1Index: number,
+    word2Index: number,
+  ): number {
+    if (word1Index === 0) {
+      return word2Index;
+    }
+    if (word2Index === 0) {
+      return word1Index;
+    }
+    if (memo[word1Index][word2Index] !== null) {
+      return memo[word1Index][word2Index];
+    }
+    let minEditDistance = 0;
+    if (word1[word1Index - 1] === word2[word2Index - 1]) {
+      minEditDistance = recursion(word1, word2, word1Index - 1, word2Index - 1);
+    } else {
+      let insertOperation = recursion(word1, word2, word1Index, word2Index - 1);
+      let deleteOperation = recursion(word1, word2, word1Index - 1, word2Index);
+      let replaceOperation = recursion(
+        word1,
+        word2,
+        word1Index - 1,
+        word2Index - 1,
+      );
+      minEditDistance =
+        Math.min(insertOperation, Math.min(deleteOperation, replaceOperation)) +
+        1;
+    }
+    memo[word1Index][word2Index] = minEditDistance;
+    return minEditDistance;
+  }
+  return recursion(word1, word2, word1.length, word2.length);
+}
+```
+
+These two approaches represent a top-down approach.
+
+But with these dynamic programming problems, I always struggled to come up with
+a bottom-up approach, where you can essentially build a result as you go, starting
+from the smallest sub-problem (two empty strings) to a full solution.
+
+## Bottom-down approach
+
+To start, we need a 2-D matrix to store the results of computation so far, initialized
+to zeroes. This matrix has M + 1 rows and N + 1 columns. Where M is the length
+of the first word and N is the length of the second word.
+
+The first row and the first column represent an empty string, and every subsequent
+row/column represents the next character in the word. Therefore, we can initialize
+the first row and column, because the cost of adding an additional character to
+the empty string is the previous cost + 1.
+
+After that, we can iterate through every cell of the matrix, and apply our recursive
+formula on every step of the way.
+
+In my opinion, this solution is the cleanest one:
+
+```ts
+function minDistance(word1: string, word2: string): number {
+  const m = word1.length;
+  const n = word2.length;
+  const dp = Array.from({ length: m + 1 }, () => {
+    return new Array(n + 1).fill(0);
+  });
+
+  for (let i = 1; i <= m; ++i) {
+    dp[i][0] = i;
+  }
+
+  for (let j = 1; j <= n; ++j) {
+    dp[0][j] = j;
+  }
+
+  for (let i = 1; i <= m; ++i) {
+    for (let j = 1; j <= n; ++j) {
+      const substitutionCost = Number(word1[i - 1] !== word2[j - 1]);
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + substitutionCost,
+      );
+    }
+  }
+
+  return dp[m][n];
+}
+```
+
+## Visualization
+
+<LevenshteinVisualization client:load />
+
+## Conclusion
+
+Levenshtein distance is one of those timeless algorithms, that are simple to
+explain, yet powerful in practice. Whether it’s helping us catch typos, powering
+fuzzy search, or (unfortunately) being misused by attackers, it’s a reminder that
+technology is only as good as how we choose to apply it. Hopefully this post gave
+you a clearer picture of both sides of the story.
