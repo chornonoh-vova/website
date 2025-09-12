@@ -3,6 +3,8 @@ import { type CollectionEntry } from "astro:content";
 import { allBlogPosts } from "../../lib/posts";
 import Layout from "../../layouts/Layout.astro";
 import PostCard from "../../components/PostCard.astro";
+import IconLink from "../../components/IconLink.astro";
+import Mail from "../../assets/icons/mail.svg";
 
 const allPosts = await allBlogPosts();
 
@@ -35,6 +37,20 @@ const years = Object.keys(postsByYear).sort(
       Here you can see all of my blog posts that I've published, grouped by
       year.
     </p>
+
+    <div class="space-y-1.5">
+      <h2>Want to receive updates straight in your inbox?</h2>
+
+      <IconLink href="https://newsletter.chornonoh-vova.com/subscribe">
+        <Mail
+          width={18}
+          height={18}
+          class="stroke-emerald-600"
+          role="presentation"
+        />
+        Subscribe to the newsletter
+      </IconLink>
+    </div>
   </section>
 
   {

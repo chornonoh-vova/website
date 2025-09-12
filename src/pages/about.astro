@@ -1,0 +1,45 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { Picture } from "astro:assets";
+import me from "../assets/images/me.jpeg";
+---
+
+<Layout title="About" description="About me">
+  <h1 class="text-2xl font-semibold">About Me</h1>
+
+  <article class="space-y-4">
+    <Picture
+      class="mx-auto mb-2 rounded-md shadow-sm sm:float-right sm:ml-2"
+      src={me}
+      width={200}
+      formats={["avif", "webp", "jpeg"]}
+      alt="My photo"
+    />
+
+    <p>
+      Hi, I’m Volodymyr Chornonoh — a senior full-stack software engineer who
+      enjoys building things that are both practical and elegant.
+    </p>
+
+    <p>
+      Over the past several years, I’ve worked with React + TypeScript on the
+      frontend and Java + Spring Boot on the backend, designing and scaling
+      applications powered by MySQL, SQL Server, and RabbitMQ. I’m passionate
+      about clean architecture, thoughtful system design, and writing code that
+      others actually enjoy maintaining.
+    </p>
+
+    <p>
+      Right now, I’m also writing on this blog, where I share lessons learned
+      from real-world engineering: from database migrations and tricky bug hunts
+      to algorithms, side projects, and experiments like solving Advent of Code.
+      If you’re curious about practical software engineering, problem-solving,
+      and learning by building, you’ll feel right at home here.
+    </p>
+
+    <p>
+      Outside of work, you’ll probably find me gaming, tinkering with puzzle
+      game ideas, or diving into a good book.
+    </p>
+  </article>
+</Layout>
