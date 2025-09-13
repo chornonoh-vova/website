@@ -7,7 +7,7 @@ function Input({
 }: ComponentPropsWithRef<"input"> & { label: string }) {
   const inputId = useId();
   return (
-    <div>
+    <div className="w-full min-w-[120px] flex-1">
       <label
         htmlFor={inputId}
         className="ps-1 text-neutral-950 dark:text-neutral-50"
@@ -53,13 +53,16 @@ export function LevenshteinVisualization() {
       Array(n + 1).fill(0),
     );
 
-    // initialize first row & column
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; ++i) {
+      dp[i][0] = i;
+    }
 
-    // fill matrix
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
+    for (let j = 1; j <= n; ++j) {
+      dp[0][j] = j;
+    }
+
+    for (let i = 1; i <= m; ++i) {
+      for (let j = 1; j <= n; ++j) {
         const substitutionCost = Number(word1[i - 1] !== word2[j - 1]);
         dp[i][j] = Math.min(
           dp[i - 1][j] + 1,
@@ -68,7 +71,6 @@ export function LevenshteinVisualization() {
         );
       }
     }
-
     setMatrix(dp);
   }
 
@@ -78,35 +80,51 @@ export function LevenshteinVisualization() {
 
   return (
     <div className="my-8">
-      <div className="mb-4 flex flex-wrap items-end gap-2">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          calculateMatrix();
+        }}
+        className="mb-4 flex flex-wrap items-end gap-2"
+      >
         <Input
           type="text"
           value={word1}
-          onChange={(e) => setWord1(e.target.value)}
+          onChange={(e) => {
+            setMatrix(null);
+            setWord1(e.target.value);
+          }}
           label="First word"
         />
         <Input
           type="text"
           value={word2}
-          onChange={(e) => setWord2(e.target.value)}
+          onChange={(e) => {
+            setMatrix(null);
+            setWord2(e.target.value);
+          }}
           label="Second word"
         />
-        <Button onClick={calculateMatrix}>Calculate</Button>
-      </div>
+        <Button type="submit">Calculate</Button>
+      </form>
 
       {matrix && (
         <div className="overflow-x-auto">
-          <table className="mt-4 w-full table-fixed border-collapse text-sm">
+          <table className="mt-4 w-full table-auto border-collapse text-sm">
+            <caption className="caption-bottom">
+              Levenshtein distance dynamic programming matrix
+            </caption>
             <thead>
               <tr>
                 <th scope="col" className={clsx(cell, headerBg)}>
                   <span className="sr-only">Empty</span>
                 </th>
                 <th scope="col" className={clsx(cell, headerBg)}>
-                  <span className="sr-only">Word 2 - index 0</span>
+                  <span className="sr-only">Word 2 - empty prefix</span>
                 </th>
                 {word2.split("").map((c, j) => (
                   <th scope="col" key={j} className={clsx(cell, headerBg)}>
+                    <span className="sr-only">Word 2 - index {j}</span>
                     {c}
                   </th>
                 ))}
@@ -117,9 +135,12 @@ export function LevenshteinVisualization() {
                 <tr key={i}>
                   <th scope="row" className={clsx(cell, headerBg)}>
                     {i > 0 ? (
-                      word1[i - 1]
+                      <>
+                        <span className="sr-only">Work 1 - index {i - 1}</span>
+                        {word1[i - 1]}
+                      </>
                     ) : (
-                      <span className="sr-only">Word 1 - index 0</span>
+                      <span className="sr-only">Word 1 - empty prefix</span>
                     )}
                   </th>
                   {row.map((val, j) => (
