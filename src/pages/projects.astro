@@ -1,0 +1,112 @@
+---
+import Layout from "../layouts/Layout.astro";
+import IconLink from "../components/IconLink.astro";
+import GitHubLight from "../assets/icons/github_light.svg?url";
+import GitHubDark from "../assets/icons/github_dark.svg?url";
+import Globe from "../assets/icons/globe.svg";
+import Newspaper from "../assets/icons/newspaper.svg";
+---
+
+<Layout title="Projects" description="My projects">
+  <h1 class="text-2xl font-semibold">Projects</h1>
+
+  <p>Here you can find my mini (or not so mini) projects.</p>
+
+  <section
+    id="gitfrag"
+    class="flex flex-col gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-700"
+  >
+    <h2 class="font-semibold">GitFrag</h2>
+    <p>
+      Fun little app in which you can sort your GitHub profile contributions,
+      and learn about different sorting algorithms in the process!
+    </p>
+
+    <div class="flex flex-wrap gap-2">
+      <IconLink href="https://gitfrag.vercel.app/">
+        <Globe width={18} height={18} role="presentation" />
+        Web
+      </IconLink>
+
+      <IconLink href="https://github.com/chornonoh-vova/gitfrag">
+        <picture>
+          <source srcset={GitHubLight} media="(prefers-color-scheme: light)" />
+          <source srcset={GitHubDark} media="(prefers-color-scheme: dark)" />
+          <img width={18} height={18} src={GitHubLight} role="presentation" />
+        </picture>
+        Repo
+      </IconLink>
+
+      <IconLink href="/blog/gitfrag-challenge">
+        <Newspaper width={18} height={18} role="presentation" />
+        Blog post
+      </IconLink>
+    </div>
+  </section>
+
+  <section
+    id="sudoku"
+    class="flex flex-col gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-700"
+  >
+    <h2 class="font-semibold">Sudoku</h2>
+    <p>Small and simple Sudoku game, installable as PWA</p>
+
+    <div class="flex flex-wrap gap-2">
+      <IconLink href="https://chornonoh-vova.github.io/sudoku/">
+        <Globe width={18} height={18} role="presentation" />
+        Web
+      </IconLink>
+
+      <IconLink href="https://github.com/chornonoh-vova/sudoku">
+        <picture>
+          <source srcset={GitHubLight} media="(prefers-color-scheme: light)" />
+          <source srcset={GitHubDark} media="(prefers-color-scheme: dark)" />
+          <img width={18} height={18} src={GitHubLight} role="presentation" />
+        </picture>
+        Repo
+      </IconLink>
+
+      <IconLink href="/blog/making-sudoku-game">
+        <Newspaper width={18} height={18} role="presentation" />
+        Blog post
+      </IconLink>
+    </div>
+  </section>
+
+  <section
+    id="warehouse-simulator"
+    class="flex flex-col gap-3 rounded-xl border border-neutral-200 p-3 dark:border-neutral-700"
+  >
+    <h2 class="font-semibold">Warehouse Simulator</h2>
+    <p>
+      Simulator, inspired by Advent of Code 2024 Day 15 puzzle, designed with
+      pixel art
+    </p>
+
+    <div class="flex flex-wrap gap-2">
+      <IconLink href="https://chornonoh-vova.github.io/warehouse-simulator/">
+        <Globe width={18} height={18} role="presentation" />
+        Web
+      </IconLink>
+
+      <IconLink href="https://github.com/chornonoh-vova/warehouse-simulator">
+        <picture>
+          <source srcset={GitHubLight} media="(prefers-color-scheme: light)" />
+          <source srcset={GitHubDark} media="(prefers-color-scheme: dark)" />
+          <img width={18} height={18} src={GitHubLight} role="presentation" />
+        </picture>
+        Repo
+      </IconLink>
+
+      <IconLink href="/blog/warehouse-simulator-part-1">
+        <Newspaper width={18} height={18} role="presentation" />
+        Blog: Part 1
+      </IconLink>
+
+      <IconLink href="/blog/warehouse-simulator-part-2">
+        <Newspaper width={18} height={18} role="presentation" />
+        Blog: Part 2
+      </IconLink>
+    </div>
+  </section>
+</Layout>

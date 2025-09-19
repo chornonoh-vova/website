@@ -76,7 +76,7 @@ function floodFillBFS(
   const queue = new Queue<Pixel>([{ row: startRow, col: startCol }]);
 
   while (!queue.isEmpty()) {
-    const { row, col } = queue.pop();
+    const { row, col } = queue.pop()!;
 
     if (
       row < 0 ||
@@ -232,7 +232,7 @@ export const FloodFillVisualization = ({
   };
 
   return (
-    <div className="mx-auto flex max-w-fit flex-col gap-3">
+    <div className="not-prose mx-auto flex max-w-fit flex-col gap-3">
       <div className="flex gap-1.5">
         <ControlButton onClick={onResetClick}>
           <RefreshCw className="size-3.5" /> Reset

@@ -8,6 +8,7 @@ import ExternalLink from "../../components/ExternalLink.astro";
 import FormattedDate from "../../components/FormattedDate.astro";
 import PostComments from "../../components/PostComments.astro";
 import ScrollToTop from "../../components/ScrollToTop.astro";
+import NewsletterSubscribe from "../../components/NewsletterSubscribe.astro";
 
 export const getStaticPaths = (async () => {
   const allPosts = await allBlogPosts();
@@ -29,7 +30,7 @@ const { Content, ...components } = await render(post);
     <FormattedDate date={post.data.date} />
     <Content components={{ ...components, a: ExternalLink }} />
     <ScrollToTop />
-
+    <NewsletterSubscribe />
     <h3>Comments</h3>
     <PostComments />
   </Prose>

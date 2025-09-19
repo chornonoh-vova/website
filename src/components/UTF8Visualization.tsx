@@ -9,28 +9,7 @@ import {
   type ComponentPropsWithRef,
   type PropsWithChildren,
 } from "react";
-
-export function Input({
-  label,
-  ...rest
-}: ComponentPropsWithRef<"input"> & { label: string }) {
-  const inputId = useId();
-  return (
-    <div className="w-full">
-      <label
-        htmlFor={inputId}
-        className="ps-1 text-neutral-950 dark:text-neutral-50"
-      >
-        {label}
-      </label>
-      <input
-        id={inputId}
-        className="focus:ring-opacity-50 mt-1 block w-full rounded-md border-neutral-200 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 dark:border-neutral-700 dark:bg-neutral-950 focus:dark:border-indigo-700 focus:dark:ring-indigo-500"
-        {...rest}
-      />
-    </div>
-  );
-}
+import { Input } from "./ui/Input";
 
 type ToggleGroupContext<T> = {
   currentValue: T;
@@ -99,7 +78,7 @@ function ToggleGroupItem<T>({
       data-selected={isSelected}
       tabIndex={0}
       onClick={handleClick}
-      className="inline-flex flex-1 items-center justify-center gap-1 border border-neutral-200 px-3 py-2 first:rounded-l-sm last:rounded-r-sm hover:bg-neutral-100 data-[selected=true]:border-indigo-200 data-[selected=true]:bg-indigo-100 dark:border-neutral-700 dark:hover:bg-neutral-800 data-[selected=true]:dark:border-indigo-700 data-[selected=true]:dark:bg-indigo-800"
+      className="inline-flex flex-1 items-center justify-center gap-1 border border-neutral-200 px-3 py-1.75 first:rounded-l-sm last:rounded-r-sm hover:bg-neutral-100 data-[selected=true]:border-indigo-200 data-[selected=true]:bg-indigo-100 dark:border-neutral-700 dark:hover:bg-neutral-800 data-[selected=true]:dark:border-indigo-700 data-[selected=true]:dark:bg-indigo-800"
       {...rest}
     >
       {children}

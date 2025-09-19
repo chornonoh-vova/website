@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { Play, RotateCcw, Shuffle } from "lucide-react";
-import { useEffect, useState, type ComponentPropsWithRef } from "react";
+import { useEffect, useState } from "react";
+import { Button } from "./ui/Button";
 
 class SudokuState {
   #rows: Uint16Array;
@@ -140,24 +141,6 @@ const initialSudokuBoards = [
     [2, 0, 5, 0, 0, 0, 0, 6, 4],
   ],
 ];
-
-function Button({
-  className,
-  children,
-  ...rest
-}: ComponentPropsWithRef<"button">) {
-  return (
-    <button
-      className={clsx(
-        "inline-flex flex-row items-center gap-1 rounded-md border border-neutral-200 px-2 py-1 shadow-xs hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-800",
-        className,
-      )}
-      {...rest}
-    >
-      {children}
-    </button>
-  );
-}
 
 function SudokuBoard({
   sudoku,

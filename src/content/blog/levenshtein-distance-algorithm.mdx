@@ -108,9 +108,12 @@ The recursive calls can also be memoized to avoid redundant computations.
 
 ```ts
 function minDistance(word1: string, word2: string): number {
-  let memo: (number | null)[][] = Array.from({ length: word1.length + 1 }, () => {
-    return new Array<number | null(word2.length + 1).fill(null);
-  });
+  let memo: (number | null)[][] = Array.from(
+    { length: word1.length + 1 },
+    () => {
+      return (new Array() < number) | null(word2.length + 1).fill(null);
+    },
+  );
   function recursion(
     word1: string,
     word2: string,

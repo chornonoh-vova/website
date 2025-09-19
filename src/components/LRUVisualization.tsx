@@ -1,7 +1,6 @@
 import clsx from "clsx";
 import { AnimatePresence, motion, Reorder, useMotionValue } from "motion/react";
 import {
-  useId,
   useReducer,
   useRef,
   useState,
@@ -10,8 +9,10 @@ import {
 } from "react";
 import { useRaisedShadow } from "../hooks/useRaisedShadow";
 import { Info, Trash } from "lucide-react";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
 
-export class LRUCache<K, V> {
+class LRUCache<K, V> {
   #cache: Map<K, V>;
   #capacity: number;
 
@@ -64,24 +65,6 @@ export class LRUCache<K, V> {
   }
 }
 
-export function Button({
-  className,
-  children,
-  ...rest
-}: ComponentPropsWithRef<"button">) {
-  return (
-    <button
-      className={clsx(
-        "rounded-md bg-indigo-500 px-4 py-2 text-white shadow-md",
-        className,
-      )}
-      {...rest}
-    >
-      {children}
-    </button>
-  );
-}
-
 export function IconButton({
   className,
   children,
@@ -97,28 +80,6 @@ export function IconButton({
     >
       {children}
     </button>
-  );
-}
-
-export function Input({
-  label,
-  ...rest
-}: ComponentPropsWithRef<"input"> & { label: string }) {
-  const inputId = useId();
-  return (
-    <div className="w-full">
-      <label
-        htmlFor={inputId}
-        className="ps-1 text-neutral-950 dark:text-neutral-50"
-      >
-        {label}
-      </label>
-      <input
-        id={inputId}
-        className="focus:ring-opacity-50 mt-1 block w-full rounded-md border-neutral-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 dark:border-neutral-700 dark:bg-neutral-950 focus:dark:border-indigo-700 focus:dark:ring-indigo-500"
-        {...rest}
-      />
-    </div>
   );
 }
 
