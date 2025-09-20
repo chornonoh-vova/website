@@ -1,45 +1,7 @@
 import clsx from "clsx";
-import { useId, useState, type ComponentPropsWithRef } from "react";
-
-function Input({
-  label,
-  ...rest
-}: ComponentPropsWithRef<"input"> & { label: string }) {
-  const inputId = useId();
-  return (
-    <div className="w-full min-w-[120px] flex-1">
-      <label
-        htmlFor={inputId}
-        className="ps-1 text-neutral-950 dark:text-neutral-50"
-      >
-        {label}
-      </label>
-      <input
-        id={inputId}
-        className="focus:ring-opacity-50 mt-1 block w-full rounded-md border-neutral-200 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 dark:border-neutral-700 dark:bg-neutral-950 focus:dark:border-indigo-700 focus:dark:ring-indigo-500"
-        {...rest}
-      />
-    </div>
-  );
-}
-
-function Button({
-  className,
-  children,
-  ...rest
-}: ComponentPropsWithRef<"button">) {
-  return (
-    <button
-      className={clsx(
-        "rounded-md bg-indigo-500 px-4 py-2 text-white shadow-md",
-        className,
-      )}
-      {...rest}
-    >
-      {children}
-    </button>
-  );
-}
+import { useState } from "react";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
 
 export function LevenshteinVisualization() {
   const [word1, setWord1] = useState("kitten");
@@ -79,7 +41,7 @@ export function LevenshteinVisualization() {
   const headerBg = "bg-gray-50 dark:bg-gray-700";
 
   return (
-    <div className="my-8">
+    <div className="not-prose my-8">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -136,7 +98,7 @@ export function LevenshteinVisualization() {
                   <th scope="row" className={clsx(cell, headerBg)}>
                     {i > 0 ? (
                       <>
-                        <span className="sr-only">Work 1 - index {i - 1}</span>
+                        <span className="sr-only">Word 1 - index {i - 1}</span>
                         {word1[i - 1]}
                       </>
                     ) : (
