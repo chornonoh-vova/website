@@ -20,8 +20,8 @@ way to stay updated.
 
 ## About
 
-I’ve also created a new “About” page. You can find it in the header. Right now
-it’s a short version of who I am and what I do, but I’m planning to refine it
+I’ve also created a new [About](/about) page. You can find it in the header. Right
+now it’s a short version of who I am and what I do, but I’m planning to refine it
 with more details, stories, and maybe even some fun facts.
 
 It felt important to have a proper space where new readers can quickly get a sense
@@ -29,9 +29,9 @@ of the person behind the posts. Blogging feels a bit more personal this way.
 
 ## Projects
 
-Additionally, there’s now a “Projects” page that lists all of the side projects
-I’ve built (or am currently tinkering with). You can check it out in the header
-as well.
+Additionally, there’s now a [Projects](/projects) page that lists all of the side
+projects I’ve built (or am currently tinkering with). You can check it out in the
+header as well.
 
 I always enjoy reading about what other people are building, so I thought it would
 be nice to share my own experiments in one place. Some of them are small, some
@@ -42,7 +42,7 @@ of what I like working on outside of my day job.
 
 Furthermore, I've refactored a couple of the components that I've built for various
 visualizations, and separated the common components. Now, all visualizations should
-feel more consistent, but there's definitely a space for improvements as well.
+feel more consistent, but there's definitely room for improvement as well.
 
 I'm thinking about replacing some of the common components with [shadcn/ui](https://ui.shadcn.com/),
 because, quite frankly, I'm not so great at design, and these components look a
