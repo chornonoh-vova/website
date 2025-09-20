@@ -98,7 +98,7 @@ export function LevenshteinVisualization() {
                   <th scope="row" className={clsx(cell, headerBg)}>
                     {i > 0 ? (
                       <>
-                        <span className="sr-only">Work 1 - index {i - 1}</span>
+                        <span className="sr-only">Word 1 - index {i - 1}</span>
                         {word1[i - 1]}
                       </>
                     ) : (

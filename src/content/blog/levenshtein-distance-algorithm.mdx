@@ -111,7 +111,7 @@ function minDistance(word1: string, word2: string): number {
   let memo: (number | null)[][] = Array.from(
     { length: word1.length + 1 },
     () => {
-      return (new Array() < number) | null(word2.length + 1).fill(null);
+      return new Array<number | null>(word2.length + 1).fill(null);
     },
   );
   function recursion(
@@ -159,7 +159,7 @@ But with these dynamic programming problems, I always struggled to come up with
 a bottom-up approach, where you can essentially build a result as you go, starting
 from the smallest sub-problem (two empty strings) to a full solution.
 
-## Bottom-down approach
+## Bottom-up approach
 
 To start, we need a 2-D matrix to store the results of computation so far, initialized
 to zeroes. This matrix has M + 1 rows and N + 1 columns. Where M is the length
