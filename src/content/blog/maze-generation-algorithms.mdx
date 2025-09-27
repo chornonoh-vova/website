@@ -1,0 +1,411 @@
+---
+title: "Maze generation algorithms"
+description: "Exploring different approaches to generate a maze"
+date: 2025-09-27
+---
+
+import MazeCells from "../../assets/images/maze-cells.svg";
+import { MazeVisualization } from "../../components/MazeVisualization";
+
+I was looking for an inspiration to build something fun. I've decided to build
+a mini-game in which players goal is to find an exit from a maze.
+
+Of course, I can draw the maze myself, but where's the fun in that? For the game
+to be interesting, maze needs to be generated dynamically. So I started investigating
+exactly that.
+
+Turns out, it's kind of a rabbit hole, and there exists multiple approaches to solving
+this problem algorithmically. Let's take a look into the most common approaches
+and build these algorithms step-by-step.
+
+## Prerequisites
+
+But first, let's define our problem more exactly:
+
+1. Every algorithm must return a matrix with the given width and height
+2. Every element of the resulting matrix must be either a `#` or ` ` symbol
+   (representing a wall and an empty space, respectively)
+3. There should be two entrances:
+   - one at the top left corner (starting point of the game in future)
+   - one at the bottom right corner (destination point)
+4. Width and height of the resulting matrix should be odd numbers (that's because
+   at the beginning many algorithms have cells that are separated by walls)
+
+Here's an example of matrix with 5 rows and 7 columns, which shows, why width and height
+parameters need to be odd:
+
+<MazeCells class="mx-auto max-w-[300px]" />
+
+Essentially, it just ensures that every cell must be surrounded by 4 walls.
+
+Here's a type definitions that'll be used throughout the article:
+
+```ts
+type Cell = "#" | " ";
+type Maze = Cell[][];
+type Position = {
+  x: number;
+  y: number;
+};
+```
+
+And, right out of the gate, I've also created a couple of constants and utility functions:
+
+```ts
+const DIRECTIONS = [
+  [0, -2],
+  [2, 0],
+  [0, 2],
+  [-2, 0],
+];
+
+const TILE_SIZE = 12;
+
+function createMazeInitial(width: number, height: number): Maze {
+  return Array.from({ length: height }, () => {
+    return new Array(width).fill("#");
+  });
+}
+
+function getNeighbors(
+  pos: Position,
+  width: number,
+  height: number,
+): Position[] {
+  const neighbors = [];
+
+  for (const [dx, dy] of DIRECTIONS) {
+    const nx = pos.x + dx;
+    const ny = pos.y + dy;
+    if (nx >= 1 && nx < width - 1 && ny >= 1 && ny < height - 1) {
+      neighbors.push({ x: nx, y: ny });
+    }
+  }
+
+  return neighbors;
+}
+```
+
+You should already be familiar with the `DIRECTIONS` array trick, that allows to
+quickly get all of the neighbors in a matrix, instead of repeating the same code
+4 (or sometimes 8) times. This time, it's modified a little bit, because for every
+cell neighbors are 2 positions away in every direction.
+
+The `createMazeInitial` is just creating a matrix with a given width and height, and
+fills it out with all `#` (walls).
+
+The `getNeighbors` is pretty handy function that returns all neighbors for a cell,
+and handles out of bounds to avoid repeating the same conditions in multiple places.
+
+With all of the requirements and some common functions done, let's start with the first
+algorithm.
+
+## Randomized DFS algorithm
+
+This algorithm is a randomized version of the depth-first search. The main idea
+is the same: pick a cell, visit neighbors (that haven't been visited already). But
+neighbors to visit next are picked randomly (instead of the same order as in classic
+DFS). Then, algorithm removes a cell between a current and the next one, and moves
+over to it. The process then continues, with cells that have no unvisited neighbors
+effectively, forming a dead-end. When algorithm encounters a dead-end, though, it
+needs to backtrack to a cell that still has the neighbors that can be visited. At
+that point, new junction will be generated, and the process will continue in a loop.
+
+The algorithm can be implemented recursively, but this time, I wanted to try something
+a bit different, and try to implement it iteratively. Especially, because this
+algorithm tends to have a very large depth of recursion. I'll still be using a stack,
+but instead of it being implicit (recursive function calls), it's an explicit management
+of the stack that differs iterative implementation from the recursive one.
+
+Here's the first algorithm implementation:
+
+```ts
+function generateMazeDFS(width: number, height: number): Maze {
+  const maze = createMazeInitial(width, height);
+  const visited = Array.from({ length: height }, () =>
+    new Array(width).fill(false),
+  );
+  const stack: Position[] = [];
+
+  stack.push({ x: 1, y: 1 });
+  visited[1][1] = true;
+  maze[1][1] = " ";
+
+  while (stack.length > 0) {
+    const curr = stack.at(-1)!;
+    const neighbors = getNeighbors(curr, width, height).filter(
+      ({ x, y }) => !visited[y][x],
+    );
+
+    if (neighbors.length > 0) {
+      const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+
+      const wallX = (curr.x + next.x) / 2;
+      const wallY = (curr.y + next.y) / 2;
+      maze[wallY][wallX] = " ";
+      maze[next.y][next.x] = " ";
+
+      visited[next.y][next.x] = true;
+      stack.push(next);
+    } else {
+      stack.pop();
+    }
+  }
+
+  maze[1][0] = " ";
+  maze[height - 2][width - 1] = " ";
+
+  return maze;
+}
+```
+
+And, here's a visualization for it, where you can click "Generate" button multiple
+times, and, because algorithm is random, new distinct maze will be generated every
+time!
+
+<MazeVisualization initialAlgo="randomized-dfs" client:load />
+
+## Randomized Kruskal's algorithm
+
+The second algorithm is also a randomized version of the Kruskal's algorithm. The
+original algorithm is designed for finding a minimum spanning tree in a graph. It
+relies on a disjoint-set data structure, and it sounds really scary, but it's incredibly
+easy to implement. Here's a version of it that I've written for this algorithm:
+
+```ts
+class UnionFind {
+  parent: Map<string, string> = new Map();
+
+  find(x: string): string {
+    if (!this.parent.has(x)) {
+      this.parent.set(x, x);
+    }
+    if (this.parent.get(x) !== x) {
+      this.parent.set(x, this.find(this.parent.get(x)!));
+    }
+    return this.parent.get(x)!;
+  }
+
+  union(x: string, y: string): boolean {
+    const rootX = this.find(x);
+    const rootY = this.find(y);
+    if (rootX === rootY) return false;
+    this.parent.set(rootX, rootY);
+    return true;
+  }
+}
+```
+
+The goal of this data structure is to store a collection of non-overlapping sets,
+and for the keys of the cells I've used a simple string concatenation:
+
+```ts
+function posKey(pos: [number, number]): string;
+function posKey(pos: Position): string;
+function posKey(pos: [number, number] | Position): string {
+  let x, y;
+  if (Array.isArray(pos)) {
+    [x, y] = pos;
+  } else {
+    x = pos.x;
+    y = pos.y;
+  }
+  return `${x}|${y}`;
+}
+```
+
+If you're wondering why there's 3 functions written here, it's actually how overloads
+needs to be written in TypeScript. And for simplicity, I've declared here 2 overloads
+that take either an array of 2 points or a `Position` object.
+
+The algorithm works as follows:
+
+- create list of all walls
+- for each wall (in a random order)
+  - if the cells were divided by a wall, remove it, and join the sets
+
+Here's an implementation of the algorithm:
+
+```ts
+function generateMazeKruskals(width: number, height: number): Maze {
+  const maze = createMazeInitial(width, height);
+
+  const uf = new UnionFind();
+  const edges: { from: Position; to: Position; wall: Position }[] = [];
+
+  for (let y = 1; y < height - 1; y += 2) {
+    for (let x = 1; x < width - 1; x += 2) {
+      maze[y][x] = " ";
+      uf.find(posKey([x, y]));
+
+      if (x + 2 < width - 1) {
+        edges.push({
+          from: { x, y },
+          to: { x: x + 2, y },
+          wall: { x: x + 1, y },
+        });
+      }
+
+      if (y + 2 < height - 1) {
+        edges.push({
+          from: { x, y },
+          to: { x, y: y + 2 },
+          wall: { x, y: y + 1 },
+        });
+      }
+    }
+  }
+
+  for (let i = edges.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [edges[i], edges[j]] = [edges[j], edges[i]];
+  }
+
+  for (const edge of edges) {
+    if (uf.union(posKey(edge.from), posKey(edge.to))) {
+      maze[edge.wall.y][edge.wall.x] = " ";
+      maze[edge.to.y][edge.to.x] = " ";
+    }
+  }
+
+  maze[1][0] = " ";
+  maze[height - 2][width - 1] = " ";
+
+  return maze;
+}
+```
+
+`UnionFind` data structure becomes a heart of this algorithm, and with it, it's
+so easy to implement!
+
+Here's a visualization for this algorithm as well:
+
+<MazeVisualization initialAlgo="randomized-kruskals" client:load />
+
+## Wilson's algorithm
+
+Before we move on to the last algorithm for today, I want you to take a closer
+look at mazes generated by the two previous algorithms. Notice something?
+
+Sometimes it's not obvious at first glance, but two previous algorithms have some
+_bias_.
+
+Mazes generated with randomized DFS tend to have **long corridors**.
+
+And mazes, generated with randomized Kruskal's algorithm, tend to have **many short dead-ends**.
+
+The Wilson's algorithm, is unique in a sense, that it's _unbiased_. Every possible
+maze that exists is generated with a same probability. The technique that allow to do
+that is called loop-erased random walk.
+
+Here's how it works:
+
+- begin with a random cell
+- then we make a path with every new cell chosen randomly, and
+  - if we reached the maze, we add this path to a maze
+  - but if we crossed our current path (forming a loop) - loop is erased before continuing
+- and we just repeat the steps above until all cells have been filled
+
+Here's how to implement it:
+
+```ts
+function generateMazeWilsons(width: number, height: number): Maze {
+  const maze = createMazeInitial(width, height);
+
+  const inMaze = new Set<string>();
+  const cells: Position[] = [];
+
+  for (let y = 1; y < height - 1; y += 2) {
+    for (let x = 1; x < width - 1; x += 2) {
+      cells.push({ x, y });
+    }
+  }
+
+  const start = cells[Math.floor(Math.random() * cells.length)];
+  inMaze.add(posKey(start));
+  maze[start.y][start.x] = " ";
+
+  for (const cell of cells) {
+    if (inMaze.has(posKey(cell))) continue;
+
+    const path = new Map<string, Position>();
+    let curr = cell;
+
+    while (!inMaze.has(posKey(curr))) {
+      const neighbors = getNeighbors(curr, width, height);
+      const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+      const currKey = posKey(curr);
+
+      if (path.has(currKey)) {
+        const keysToRemove: string[] = [];
+        let found = false;
+
+        for (const key of path.keys()) {
+          if (found) {
+            keysToRemove.push(key);
+          }
+          if (key === currKey) {
+            found = true;
+          }
+        }
+
+        for (const key of keysToRemove) {
+          path.delete(key);
+        }
+      }
+
+      path.set(currKey, next);
+      curr = next;
+    }
+
+    curr = cell;
+    while (path.has(posKey(curr))) {
+      const currKey = posKey(curr);
+      const next = path.get(currKey)!;
+
+      maze[curr.y][curr.x] = " ";
+      const wallX = (curr.x + next.x) / 2;
+      const wallY = (curr.y + next.y) / 2;
+      maze[wallY][wallX] = " ";
+
+      inMaze.add(currKey);
+      curr = next;
+    }
+  }
+
+  maze[1][0] = " ";
+  maze[height - 2][width - 1] = " ";
+
+  return maze;
+}
+```
+
+And here's a visualization of this algorithm:
+
+<MazeVisualization initialAlgo="wilsons" client:load />
+
+## Conclusion
+
+Turns out, maze generation is a pretty interesting algorithmic task, and I'm glad
+that I challenged myself to research it. Because along the way, I learned the unexpected
+application of some "classic" algorithms, cool data structure, and completely new algorithm
+and technique for me. And I had a lot of fun writing these visualizations as well!
+Combining React and canvas rendering is something that I've never done in my day-to-day
+job.
+
+Here’s a quick comparison of the three algorithms we explored:
+
+| Algorithm      | Speed  | Maze Bias            | Notes                                                                                        |
+| -------------- | ------ | -------------------- | -------------------------------------------------------------------------------------------- |
+| Randomized DFS | Fast   | Long corridors       | Simple stack-based backtracking. Great for quick mazes with a natural “cave-like” feel.      |
+| Kruskal’s      | Medium | Many short dead ends | Graph-based approach using union-find. Produces dense mazes with lots of branches.           |
+| Wilson’s       | Slower | Very uniform         | Uses loop-erased random walks. Ensures unbiased coverage, good for evenly distributed mazes. |
+
+These algorithms are not just academic exercises. They show up in games (procedural
+dungeon generation), puzzle design, and even AI testing environments where a variety
+of map structures are important.
+
+If you’ve followed along, you now have three different maze generators in your toolkit,
+plus a visualization component to see them in action. From here, you can experiment
+further: add weighted randomness, generate mazes in 3D, or combine algorithms to
+create unique results.

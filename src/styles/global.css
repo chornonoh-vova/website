@@ -21,7 +21,7 @@ body {
 body {
   @apply font-sans antialiased;
   @apply bg-neutral-50 dark:bg-neutral-900;
-  @apply text-black/75 dark:text-white/75;
+  @apply text-black/80 dark:text-white/80;
 }
 
 .astro-code {
