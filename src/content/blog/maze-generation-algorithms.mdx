@@ -14,7 +14,7 @@ Of course, I can draw the maze myself, but where's the fun in that? For the game
 to be interesting, maze needs to be generated dynamically. So I started investigating
 exactly that.
 
-Turns out, its kind of a rabbit hole, and there exists multiple approaches to solving
+Turns out, it's kind of a rabbit hole, and there exists multiple approaches to solving
 this problem algorithmically. Let's take a look into the most common approaches
 and build these algorithms step-by-step.
 
@@ -31,7 +31,7 @@ But first, let's define our problem more exactly:
 4. Width and height of the resulting matrix should be odd numbers (that's because
    at the beginning many algorithms have cells that are separated by walls)
 
-Here's an example of matrix with 5 rows an 7 columns, which shows, why width and height
+Here's an example of matrix with 5 rows and 7 columns, which shows, why width and height
 parameters need to be odd:
 
 <MazeCells class="mx-auto max-w-[300px]" />
@@ -91,7 +91,7 @@ quickly get all of the neighbors in a matrix, instead of repeating the same code
 4 (or sometimes 8) times. This time, it's modified a little bit, because for every
 cell neighbors are 2 positions away in every direction.
 
-The `createMazeInitial` if just creating a matrix with a given width and height, and
+The `createMazeInitial` is just creating a matrix with a given width and height, and
 fills it out with all `#` (walls).
 
 The `getNeighbors` is pretty handy function that returns all neighbors for a cell,

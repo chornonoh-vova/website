@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "./ui/Button";
 import { RefreshCcw } from "lucide-react";
 
@@ -305,7 +305,7 @@ export function MazeVisualization({ initialAlgo }: { initialAlgo: string }) {
     );
   };
 
-  const generate = () => {
+  const generate = useCallback(() => {
     const canvas = canvasRef.current!;
 
     const scale = window.devicePixelRatio;
@@ -332,9 +332,9 @@ export function MazeVisualization({ initialAlgo }: { initialAlgo: string }) {
         break;
       }
     }
-  };
+  }, [algo]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext("2d")!;
 
@@ -346,7 +346,7 @@ export function MazeVisualization({ initialAlgo }: { initialAlgo: string }) {
 
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(scale, scale);
-  };
+  }, []);
 
   useEffect(drawMaze, [maze]);
 
@@ -358,18 +358,16 @@ export function MazeVisualization({ initialAlgo }: { initialAlgo: string }) {
 
     listener();
 
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+
     window.addEventListener("resize", listener);
-    window
-      .matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", listener);
+    mediaQuery.addEventListener("change", listener);
 
     return () => {
       window.removeEventListener("resize", listener);
-      window
-        .matchMedia("(prefers-color-scheme: dark)")
-        .removeEventListener("change", reset);
+      mediaQuery.removeEventListener("change", listener);
     };
-  }, []);
+  }, [generate, reset]);
 
   const algorithms: Record<string, string> = {
     "randomized-dfs": "Randomized DFS",
