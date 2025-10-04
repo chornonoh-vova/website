@@ -15,7 +15,7 @@ branches at the same time.
 When the staging area is empty, it's not a problem, but when there are some changes
 on a branch that I don't want to commit, switching between branches becomes problematic.
 
-And at first, I was utilizing `git stash` to save my uncomitted work before switching
+And at first, I was utilizing `git stash` to save my uncommitted work before switching
 to another branch. Actually, I've already used it before, when doing `git rebase`,
 because Git can't continue rebasing when there are some files in a "dirty state".
 
@@ -25,15 +25,17 @@ a stash.
 
 ## Worktree
 
-I happen to stumble upon this [article](https://mskadu.medium.com/mastering-git-worktree-a-developers-guide-to-multiple-working-directories-c30f834f79a5),
+I happened to stumble upon this [article](https://mskadu.medium.com/mastering-git-worktree-a-developers-guide-to-multiple-working-directories-c30f834f79a5),
 and, without a joke, Git worktrees straight up changed my life!
 
 Let me briefly walk you through what worktree is and how I'm utilizing them.
 
-When you clone a repository to your local machine, turns out you already have a working
-tree! This working tree is called "main". And Git allows to create multiple working
-trees linked to the same repository, which, in turn, allows for multiple branches
-checked out at the same time.
+When you clone a repository to your local machine, you already get a primary working
+tree that points at whatever branch you checked out (often `main`, but it can be
+any branch).
+
+Git also lets you create additional working trees linked to the same repository,
+which in turn allows multiple branches to be checked out at the same time.
 
 The command to create an additional worktree is simple:
 
