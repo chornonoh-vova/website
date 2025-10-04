@@ -9,19 +9,22 @@ import WebsiteIcon from "../assets/icons/website.png";
   id="header"
   class="fixed top-0 right-0 left-0 z-50 border-b border-b-neutral-200 bg-neutral-50/75 py-1 saturate-200 backdrop-blur-sm transition-transform duration-300 dark:border-b-neutral-700 dark:bg-neutral-900/25"
 >
-  <div
+  <nav
     class="container mx-auto flex max-w-[80ch] items-center justify-between px-5"
+    aria-label="Primary navigation"
   >
     <Link href="/">
       <Image
         src={WebsiteIcon}
         width={WebsiteIcon.width / 2}
+        height={WebsiteIcon.height / 2}
         densities={[1.5, 2]}
+        priority
         alt="Volodymyr's website logo"
       />
     </Link>
 
-    <nav class="flex items-center gap-1" aria-label="Primary navigation">
+    <div class="flex items-center gap-1">
       <Link
         href="/blog"
         underline
@@ -45,8 +48,8 @@ import WebsiteIcon from "../assets/icons/website.png";
       >
         about
       </Link>
-    </nav>
-  </div>
+    </div>
+  </nav>
 </header>
 
 <script>
