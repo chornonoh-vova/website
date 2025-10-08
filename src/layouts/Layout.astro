@@ -34,10 +34,19 @@ const { title, description } = Astro.props;
     </style>
   </head>
   <body>
+    <a
+      href="#main-content"
+      class="fixed top-0 left-0 z-50 -translate-y-full transform bg-blue-500 px-4 py-2 text-white transition focus:translate-y-0"
+    >
+      Skip to main content
+    </a>
+
     <Header />
+
     <main
+      id="main-content"
       class="container mx-auto flex max-w-[80ch] flex-col gap-8 px-4 pt-24 pb-12 md:px-5"
-      aria-label="Main site content"
+      aria-label="Main content"
     >
       <slot />
     </main>
