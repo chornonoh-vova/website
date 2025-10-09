@@ -40,7 +40,11 @@ export default defineConfig({
       },
     }),
     sitemap(),
-    react(),
+    react({
+      babel: {
+        plugins: ["babel-plugin-react-compiler"],
+      },
+    }),
   ],
 
   adapter: vercel(),

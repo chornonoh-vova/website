@@ -1,12 +1,6 @@
 import clsx from "clsx";
 import { AnimatePresence, motion, Reorder, useMotionValue } from "motion/react";
-import {
-  useReducer,
-  useRef,
-  useState,
-  type ComponentPropsWithRef,
-  type Ref,
-} from "react";
+import { useRef, useState, type ComponentPropsWithRef, type Ref } from "react";
 import { useRaisedShadow } from "../hooks/useRaisedShadow";
 import { Info, Trash } from "lucide-react";
 import { Button } from "./ui/Button";
@@ -355,6 +349,44 @@ export function CacheState({
 
 const DEFAULT_CAPACITY = 6;
 
+function useLRUCache(capacity: number, initial: [string, string][]) {
+  const cache = useRef(new LRUCache(capacity, initial));
+  const [entries, setEntries] = useState(initial.toReversed());
+
+  const keys = entries.map(([key]) => key);
+
+  const updateEntries = () => {
+    setEntries(cache.current.entries());
+  };
+
+  return {
+    keys,
+    entries,
+    deleteKey: (key: string) => {
+      cache.current.delete(key);
+      updateEntries();
+    },
+    getValue: (key: string) => {
+      const value = cache.current.get(key);
+      updateEntries();
+      return value;
+    },
+    setKeyValue: (key: string, value: string) => {
+      cache.current.set(key, value);
+      updateEntries();
+    },
+    reset: () => {
+      cache.current.clear();
+
+      for (const [key, value] of initial) {
+        cache.current.set(key, value);
+      }
+
+      updateEntries();
+    },
+  };
+}
+
 export function LRUVisualization({
   capacity = DEFAULT_CAPACITY,
   initial = [],
@@ -370,58 +402,28 @@ export function LRUVisualization({
   deleteControl?: boolean;
   resetControl?: boolean;
 }) {
-  const cache = useRef(new LRUCache(capacity, initial));
-  const [, reRender] = useReducer((x) => x + 1, 0);
+  const { keys, entries, deleteKey, getValue, setKeyValue, reset } =
+    useLRUCache(capacity, initial);
 
-  const entries = cache.current.entries();
-  const keys = entries.map(([key]) => key);
+  const controls = {
+    ...(deleteControl && { deleteKey }),
+    ...(getControl && { getValue }),
+    ...(setControl && { setKeyValue }),
+    ...(resetControl && { reset }),
+  };
 
   return (
     <div className="not-prose grid w-full grid-cols-1 gap-2 md:grid-cols-2">
       <CacheState
         keys={keys}
         entries={entries}
-        deleteKey={
-          deleteControl
-            ? (key) => {
-                cache.current.delete(key);
-                reRender();
-              }
-            : undefined
-        }
+        deleteKey={controls.deleteKey}
       />
 
       <CacheControls
-        getValue={
-          getControl
-            ? (key) => {
-                const value = cache.current.get(key);
-                reRender();
-                return value;
-              }
-            : undefined
-        }
-        setKeyValue={
-          setControl
-            ? (key, value) => {
-                cache.current.set(key, value);
-                reRender();
-              }
-            : undefined
-        }
-        reset={
-          resetControl
-            ? () => {
-                cache.current.clear();
-
-                for (const [key, value] of initial) {
-                  cache.current.set(key, value);
-                }
-
-                reRender();
-              }
-            : undefined
-        }
+        getValue={controls.getValue}
+        setKeyValue={controls.setKeyValue}
+        reset={controls.reset}
       />
     </div>
   );
