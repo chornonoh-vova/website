@@ -37,7 +37,7 @@ const rssUrl = new URL("rss.xml", Astro.site);
         <picture>
           <source srcset={GitHubLight} media="(prefers-color-scheme: light)" />
           <source srcset={GitHubDark} media="(prefers-color-scheme: dark)" />
-          <img width={18} height={18} src={GitHubLight} role="presentation" />
+          <img width={18} height={18} src={GitHubLight} alt="" />
         </picture>
         GitHub
       </IconLink>
@@ -49,7 +49,7 @@ const rssUrl = new URL("rss.xml", Astro.site);
         <picture>
           <source srcset={ThreadsLight} media="(prefers-color-scheme: light)" />
           <source srcset={ThreadsDark} media="(prefers-color-scheme: dark)" />
-          <img width={18} height={18} src={ThreadsLight} role="presentation" />
+          <img width={18} height={18} src={ThreadsLight} alt="" />
         </picture>
         Threads
       </IconLink>
