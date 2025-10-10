@@ -4,7 +4,6 @@ import {
   createContext,
   use,
   useId,
-  useMemo,
   useState,
   type ComponentPropsWithRef,
   type PropsWithChildren,
@@ -145,24 +144,22 @@ function Bytes({ bytes }: { bytes: string[] }) {
   );
 }
 
+const textEncoder = new TextEncoder();
+
 export function UTF8Visualization() {
   const [input, setInput] = useState("hello 😉");
   const [repr, setRepr] = useState<"hex" | "bin">("hex");
 
-  const map = useMemo(() => {
-    const radix = repr === "hex" ? 16 : 2;
-    const pad = repr === "hex" ? 2 : 8;
-    const textEncoder = new TextEncoder();
-    const result: [string, string[]][] = [];
-    for (const ch of input) {
-      const encoded = textEncoder.encode(ch);
-      const bytes = Array.from(encoded).map((b) =>
-        b.toString(radix).padStart(pad, "0"),
-      );
-      result.push([ch, bytes]);
-    }
-    return result;
-  }, [input, repr]);
+  const radix = repr === "hex" ? 16 : 2;
+  const pad = repr === "hex" ? 2 : 8;
+  const map: [string, string[]][] = [];
+  for (const ch of input) {
+    const encoded = textEncoder.encode(ch);
+    const bytes = Array.from(encoded).map((b) =>
+      b.toString(radix).padStart(pad, "0"),
+    );
+    map.push([ch, bytes]);
+  }
 
   return (
     <div className="not-prose">
