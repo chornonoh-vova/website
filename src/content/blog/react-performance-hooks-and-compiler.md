@@ -70,7 +70,7 @@ The syntax of it is essentially the same: the first argument is the function
 that we want to cache, and the second is an array of dependencies. In this case,
 it’s empty because we've used the special form of set state with a callback.
 
-### memo
+### React.memo
 
 But, turns out, it’s not enough. Even though all of the props passed to the
 `<Todo />` component aren't changing, React is still re-rendering them.
@@ -81,10 +81,11 @@ To mitigate this, the component itself needs to be memoized:
 const TodoMemoized = React.memo(Todo);
 ```
 
-React.memo is a higher-order component that wraps a component, and by comparing
+`React.memo` is a higher-order component that wraps a component, and by comparing
 previous and new props decides whether to re-render the component or not.
 
-Here's what manual optimization approach looks like after applying all of the optimizations:
+Here's what the manual optimization approach looks like after applying all of the
+optimizations:
 
 ```jsx
 const TodoMemoized = React.memo(Todo);
@@ -117,10 +118,10 @@ function TodoList({ visibility, themeColor }) {
 
 ## Compiler
 
-Let’s rewind to the first example. Turns out, all of the optimizations, that we've
-just discussed now can be applied automatically!
+Let’s rewind to the first example. Turns out all of the optimizations we've just
+discussed now can be applied automatically!
 
-![React compiler Playground screenshot with](../../assets/images/react-compiler-example.png)
+![React compiler Playground showing automatic memoization transforms](../../assets/images/react-compiler-example.png)
 
 Here’s a playground with this example:
 
@@ -146,9 +147,8 @@ more on logic, less on micromanaging renders.
 
 I'm excited to install and try out this compiler on my project at work! Given how
 easy the setup was for my blog, I’m hoping that it will be as easy on the "real"
-project. But also, the project on work is far more complex and much bigger. Still,
-I'll share my experience on how it goes.
+project. The project at work is far more complex and much bigger, but I'll share
+how it goes.
 
 ![React 17 to 18 PR size](../../assets/images/react-17-to-18-pr-size.png)
-But only after I’ll merge this monstrous PR to upgrade to React 18 from 17
- 😅
+But only after I merge this monstrous PR to upgrade from React 17 to 18 😅
