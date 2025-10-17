@@ -28,7 +28,12 @@ function getRandomCount() {
   return Math.floor(Math.random() * (MAX - MIN + 1)) + MIN;
 }
 
-type Emoji = [string, string, string];
+type Emoji = {
+  id: string;
+  emoji: string;
+  top: string;
+  left: string;
+};
 
 export function RandomEmojiSpawner() {
   const [inert, setInert] = useState(true);
@@ -52,7 +57,12 @@ export function RandomEmojiSpawner() {
     for (let i = 0; i < n; ++i) {
       const top = Math.floor(Math.random() * 100);
       const left = Math.floor(Math.random() * 100);
-      emojisToAdd.push([getRandomEmoji(), `${top}%`, `${left}%`]);
+      emojisToAdd.push({
+        id: `${Date.now()}-${i}`,
+        emoji: getRandomEmoji(),
+        top: `${top}%`,
+        left: `${left}%`,
+      });
     }
 
     setEmojis((prev) => [...prev, ...emojisToAdd]);
@@ -69,9 +79,9 @@ export function RandomEmojiSpawner() {
         inert={inert}
       >
         <AnimatePresence>
-          {emojis.map(([emoji, top, left], idx) => (
+          {emojis.map(({ id, emoji, top, left }) => (
             <motion.span
-              key={idx}
+              key={id}
               className="absolute origin-center -translate-1/2 leading-none"
               style={{ top, left }}
               transition={{ type: "spring", bounce: 0.5 }}
