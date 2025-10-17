@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "./ui/Button";
 import { BrushCleaning } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
-const EMOJIIS = [
+const EMOJIS = [
   "⚡️",
   "🚀",
   "🤩",
@@ -16,8 +17,8 @@ const EMOJIIS = [
   "🎁",
 ];
 
-function getRandomEmojii() {
-  return EMOJIIS[Math.floor(Math.random() * EMOJIIS.length)];
+function getRandomEmoji() {
+  return EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
 }
 
 const MIN = 5;
@@ -27,38 +28,38 @@ function getRandomCount() {
   return Math.floor(Math.random() * (MAX - MIN + 1)) + MIN;
 }
 
-type Emojii = [string, string, string];
+type Emoji = [string, string, string];
 
-export function RandomEmojiiSpawner() {
+export function RandomEmojiSpawner() {
   const [inert, setInert] = useState(true);
-  const [emojiis, setEmojiis] = useState<Emojii[]>([]);
+  const [emojis, setEmojis] = useState<Emoji[]>([]);
 
-  let addLabel = "Add some emojiis!";
+  let addLabel = "Add some emojis!";
 
-  if (emojiis.length >= 100) {
-    addLabel = "More emojiis!!!!";
+  if (emojis.length >= 100) {
+    addLabel = "More emojis!!!!";
   }
 
-  if (emojiis.length >= 500) {
+  if (emojis.length >= 500) {
     addLabel = "MOREEE!!!!!!!!";
   }
 
   const spawn = () => {
-    const emojiisToAdd: Emojii[] = [];
+    const emojisToAdd: Emoji[] = [];
 
     const n = getRandomCount();
 
     for (let i = 0; i < n; ++i) {
       const top = Math.floor(Math.random() * 100);
       const left = Math.floor(Math.random() * 100);
-      emojiisToAdd.push([getRandomEmojii(), `${top}%`, `${left}%`]);
+      emojisToAdd.push([getRandomEmoji(), `${top}%`, `${left}%`]);
     }
 
-    setEmojiis((prev) => [...prev, ...emojiisToAdd]);
+    setEmojis((prev) => [...prev, ...emojisToAdd]);
   };
 
   const clear = () => {
-    setEmojiis([]);
+    setEmojis([]);
   };
 
   return (
@@ -67,15 +68,21 @@ export function RandomEmojiiSpawner() {
         className="absolute inset-0 m-2 border border-transparent"
         inert={inert}
       >
-        {emojiis.map(([emojii, top, left], idx) => (
-          <span
-            key={idx}
-            className="animate-fade-in absolute -translate-1/2 leading-none"
-            style={{ top, left }}
-          >
-            {emojii}
-          </span>
-        ))}
+        <AnimatePresence>
+          {emojis.map(([emoji, top, left], idx) => (
+            <motion.span
+              key={idx}
+              className="absolute origin-center -translate-1/2 leading-none"
+              style={{ top, left }}
+              transition={{ type: "spring", bounce: 0.5 }}
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0 }}
+            >
+              {emoji}
+            </motion.span>
+          ))}
+        </AnimatePresence>
       </div>
       <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 flex-wrap gap-2">
         <div className="flex grow items-center gap-1 rounded-md bg-neutral-50/75 p-1 backdrop-blur-sm dark:bg-neutral-900/25">

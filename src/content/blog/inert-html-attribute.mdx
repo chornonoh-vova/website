@@ -4,7 +4,7 @@ description: "What is inert and what problem does it solve?"
 date: 2025-10-18
 ---
 
-import { RandomEmojiiSpawner } from "../../components/RandomEmojiiSpawner";
+import { RandomEmojiSpawner } from "../../components/RandomEmojiSpawner";
 
 There are always elements on the page that I've developed that serve no purpose;
 they are purely decorative. There are multiple things that we need to account
@@ -43,7 +43,7 @@ by the user. There is a CSS rule that exists to do that as well:
 
 ⬆️ Prevent the text from being selectable.
 
-The additional interesting this about this property is that you can set it to all,
+The other interesting thing about this property is that you can set it to `all`,
 and users will only be able to select the element fully, not letter by letter.
 
 Read more in the [user-select documentation](https://developer.mozilla.org/en-US/docs/Web/CSS/user-select).
@@ -67,7 +67,7 @@ For example:
 ⬆️ Hides the element from the screen readers.
 
 Recently, I caused an accessibility issue with this one 🫣. It's because one of
-the icons had an off screen text associated with it, and a visible label right next
+the icons had an off-screen text associated with it, and a visible label right next
 to it, essentially reading the icon description twice.
 
 It's a pretty common technique to hide an element description from view, but leave
@@ -99,9 +99,9 @@ Read more in the [inert documentation](https://developer.mozilla.org/en-US/docs/
 
 Here's a small demo with the `inert` attribute usage:
 
-<RandomEmojiiSpawner client:load />
+<RandomEmojiSpawner client:load />
 
-Just press a button, and random emojiis will get added onto the page! But you
+Just press a button, and random emojis will get added onto the page! But you
 won't be able to click or select them, and they won't show up in the accessibility
 tree.
 
