@@ -1,0 +1,122 @@
+---
+title: "inert HTML attribute"
+description: "What is inert and what problem does it solve?"
+date: 2025-10-18
+---
+
+import { RandomEmojiSpawner } from "../../components/RandomEmojiSpawner";
+
+There are always elements on the page that I've developed that serve no purpose;
+they are purely decorative. There are multiple things that we need to account
+for when adding such elements to the page. Let’s go through the techniques and
+what problems they are solving.
+
+## pointer-events
+
+The first thing that we want to achieve is to prevent an element from being clickable
+and focusable. We can do it with a simple CSS rule:
+
+```css
+.example {
+  pointer-events: none;
+}
+```
+
+⬆️ Prevent the element from being clickable/focusable.
+
+There are additional capabilities of the pointer-events property; for example,
+you can have an SVG element receive pointer events only on the stroke or only on
+the fill.
+
+Read more in the [pointer-events documentation](https://developer.mozilla.org/en-US/docs/Web/CSS/pointer-events).
+
+## user-select
+
+If we’re displaying some purely decorative emojis, they should also not be selectable
+by the user. There is a CSS rule that exists to do that as well:
+
+```css
+.example {
+  user-select: none;
+}
+```
+
+⬆️ Prevent the text from being selectable.
+
+The other interesting thing about this property is that you can set it to `all`,
+and users will only be able to select the element fully, not letter by letter.
+
+Read more in the [user-select documentation](https://developer.mozilla.org/en-US/docs/Web/CSS/user-select).
+
+Surprisingly, this CSS property is not in the baseline, because it’s not supported
+in the WebView on iOS 🫠
+
+## aria-hidden
+
+We also want to hide the element from the screen readers. It can be achieved with
+an HTML attribute aria-hidden.
+
+For example:
+
+```html
+<div aria-hidden="true">
+  <!-- Some elements content -->
+</div>
+```
+
+⬆️ Hides the element from the screen readers.
+
+Recently, I caused an accessibility issue with this one 🫣. It's because one of
+the icons had an off-screen text associated with it, and a visible label right next
+to it, essentially reading the icon description twice.
+
+It's a pretty common technique to hide an element description from view, but leave
+it in the accessibility tree so that screen readers can still present it to users
+who need it. TailwindCSS has the [sr-only](https://tailwindcss.com/docs/display#screen-reader-only)
+utility class for it.
+
+Read more in the [aria-hidden documentation](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-hidden).
+
+## inert
+
+What if we could achieve all of the above… With one attribute?
+
+Turns out, we can do that with an inert HTML attribute. This attribute disables
+click and focus events, disallows selection, and hides an element from screen
+readers. Furthermore, this attribute has excellent browser support!
+
+```html
+<div inert>
+  <!-- Some elements content -->
+</div>
+```
+
+Additionally, all of the child elements will inherit inert from the parent, except
+for `<dialog>`, that kind of "escapes" this inertness. It can be made inert only
+by placing an inert attribute on itself.
+
+Read more in the [inert documentation](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/inert)
+
+Here's a small demo with the `inert` attribute usage:
+
+<RandomEmojiSpawner client:load />
+
+Just press a button, and random emojis will get added onto the page! But you
+won't be able to click or select them, and they won't show up in the accessibility
+tree.
+
+There's also a checkbox that allows you to disable `inert`, and you'll be able to
+see how awful user experience becomes without it 🙃
+
+Btw, sometimes if you click too fast, Safari makes a page zoom-in (because there's
+a double-tap gesture to do that). I've disabled it for this demo container.
+
+Read more in the [touch-action documentation](https://developer.mozilla.org/en-US/docs/Web/CSS/touch-action)
+and additionally, [touch-action utilities](https://tailwindcss.com/docs/touch-action)
+in TailwindCSS.
+
+## Conclusion
+
+Sometimes, basic features of HTML are forgotten, but it is essential for a frontend
+engineer to know them. And of course, nobody can know everything, but just visit MDN
+from time to time, and I guarantee you, you'll find something useful in there 😉
