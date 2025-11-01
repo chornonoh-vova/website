@@ -100,9 +100,9 @@ without it, the drop event won’t fire.
 Also, drag & drop API consists of several events:
 
 - `dragstart` - it is fired on the draggable element, when user starts dragging it
-- `dragleave` - it is fired on the draggable element as well, but when then dragging stops
+- `dragleave` - it is fired on the draggable element as well, but when the dragging stops
 - `dragover` - it is fired on the "drop zone" element, to indicate that draggable element is hovering over it
-- `drop` - it is fired on the "drop zone" element as well, when user let's go of the mouse and intent to drop currently dragging element
+- `drop` - it is fired on the "drop zone" element as well, when user lets go of the mouse and intends to drop currently dragging element
 
 Let's combine it all together into an example!
 
@@ -190,7 +190,7 @@ for (const task of tasks) {
     }, 0);
   });
 
-  task.addEventListener("dragend", () => {
+  task.addEventListener("dragend", (event) => {
     task.removeAttribute("id");
     event.target.style.display = "block";
   });
@@ -263,7 +263,9 @@ Here's a demo itself for you to play around:
 
 ## React implementation
 
-For the React implementation, I've decided to use a [Drag and Drop library](https://drag-and-drop.formkit.com/), and it was such a big pleasure to work with it!
+Now let’s see how we can build the same board in React, but this time, without manually wiring up all the events.
+
+I've decided to use a [formkit drag and drop library](https://drag-and-drop.formkit.com/). And while there are several drag-and-drop libraries for React, this one feels closest to the native API while handling reordering and cross-column movement out of the box.
 
 Let's take a look at the component that constitute the React implementation.
 

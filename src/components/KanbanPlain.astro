@@ -69,7 +69,7 @@ const tasks = [
       }, 0);
     });
 
-    task.addEventListener("dragend", () => {
+    task.addEventListener("dragend", (event) => {
       task.removeAttribute("id");
       event.target.style.display = "block";
     });
