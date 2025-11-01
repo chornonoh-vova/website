@@ -1,0 +1,134 @@
+---
+const tasks = [
+  {
+    title: "To Do",
+    tasks: [
+      "✏️ Write introduction for blog post",
+      "🧠 Research best practices for drag & drop UX",
+    ],
+  },
+  {
+    title: "In Progress",
+    tasks: [
+      "💻 Implement drag & drop events in JavaScript",
+      "🧩 Debug card reordering logic",
+      "🧱 Build React version of the Kanban board",
+    ],
+  },
+  {
+    title: "Done",
+    tasks: [
+      "🔍 Review HTML drag & drop MDN docs",
+      "🚀 Set up project structure and tooling",
+    ],
+  },
+];
+---
+
+<div class="not-prose flex flex-row gap-2 overflow-y-scroll">
+  {
+    tasks.map(({ title, tasks }) => (
+      <div class="task-column min-w-[200px] flex-1 space-y-1.5 rounded-md border border-neutral-200 p-2 dark:border-neutral-700">
+        <h3 class="text-xl">{title}</h3>
+
+        <ul class="flex list-none flex-col gap-1 p-0">
+          {tasks.map((task) => (
+            <li
+              class="task-item cursor-grab rounded-sm border border-neutral-200 bg-white p-1 active:cursor-grabbing dark:border-neutral-700 dark:bg-black"
+              draggable={true}
+            >
+              {task}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))
+  }
+</div>
+
+<script>
+  const columns = document.querySelectorAll(".task-column");
+
+  for (const column of columns) {
+    column.addEventListener("dragover", (event) => {
+      if (event.dataTransfer.types.includes("task")) {
+        event.preventDefault();
+      }
+    });
+  }
+
+  const tasks = document.querySelectorAll(".task-item");
+
+  for (const task of tasks) {
+    task.addEventListener("dragstart", (event) => {
+      task.id = "dragged-task";
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("task", "");
+      setTimeout(() => {
+        event.target.style.display = "none";
+      }, 0);
+    });
+
+    task.addEventListener("dragend", (event) => {
+      task.removeAttribute("id");
+      event.target.style.display = "block";
+    });
+  }
+
+  function createPlaceholder(draggedTask) {
+    const placeholder = draggedTask.cloneNode(true);
+    placeholder.classList.add("task-placeholder", "border-dashed");
+    placeholder.removeAttribute("id");
+    placeholder.style.display = "block";
+    return placeholder;
+  }
+
+  function movePlaceholder(event) {
+    const column = event.currentTarget;
+    const draggedTask = document.getElementById("dragged-task");
+    const tasks = column.children[1];
+    const existingPlaceholder = column.querySelector(".task-placeholder");
+    if (existingPlaceholder) {
+      const placeholderRect = existingPlaceholder.getBoundingClientRect();
+      if (
+        placeholderRect.top <= event.clientY &&
+        placeholderRect.bottom >= event.clientY
+      ) {
+        return;
+      }
+    }
+    for (const task of tasks.children) {
+      if (task.getBoundingClientRect().bottom >= event.clientY) {
+        if (task === existingPlaceholder) return;
+        existingPlaceholder?.remove();
+        tasks.insertBefore(
+          existingPlaceholder ?? createPlaceholder(draggedTask),
+          task,
+        );
+        return;
+      }
+    }
+    existingPlaceholder?.remove();
+    tasks.append(existingPlaceholder ?? createPlaceholder(draggedTask));
+  }
+
+  for (const column of columns) {
+    column.addEventListener("dragover", movePlaceholder);
+    column.addEventListener("dragleave", (event) => {
+      if (column.contains(event.relatedTarget)) return;
+      const placeholder = column.querySelector(".task-placeholder");
+      placeholder?.remove();
+    });
+
+    column.addEventListener("drop", (event) => {
+      event.preventDefault();
+
+      const draggedTask = document.getElementById("dragged-task");
+      const placeholder = column.querySelector(".task-placeholder");
+      if (!placeholder) return;
+      draggedTask.remove();
+      column.children[1].insertBefore(draggedTask, placeholder);
+      placeholder.remove();
+    });
+  }
+</script>

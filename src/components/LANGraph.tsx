@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMatchMedia } from "../hooks/useMatchMedia";
 
 const links: [string, string][] = [
@@ -131,7 +131,7 @@ export const LANGraph = ({
 }) => {
   const isSM = useMatchMedia("(width < 40rem)");
 
-  const graph = useRef(new Graph(links));
+  const graph = useMemo(() => new Graph(links), []);
 
   const [highlightedNodes, setHighlightedNodes] = useState<string[]>([]);
   const [highlightedEdges, setHighlightedEdges] = useState<string[]>([]);
@@ -154,7 +154,7 @@ export const LANGraph = ({
     if (mode === "neighbors") {
       allNodes.add(vertex);
 
-      const neighbors = graph.current.getNeighbors(vertex);
+      const neighbors = graph.getNeighbors(vertex);
 
       for (const neighbor of neighbors) {
         allNodes.add(neighbor);
@@ -163,7 +163,7 @@ export const LANGraph = ({
     }
 
     if (mode === "3-clique") {
-      const cliques = graph.current.get3Cliques(vertex);
+      const cliques = graph.get3Cliques(vertex);
 
       for (const clique of cliques) {
         for (let i = 0; i < clique.length; ++i) {
@@ -177,7 +177,7 @@ export const LANGraph = ({
     }
 
     if (mode === "max-clique") {
-      const clique = graph.current.getMaxClique(vertex);
+      const clique = graph.getMaxClique(vertex);
 
       for (let i = 0; i < clique.length; ++i) {
         allNodes.add(clique[i]);
