@@ -1,0 +1,353 @@
+---
+title: "Exploring Drag and Drop API"
+description: "Learning about web platform fundamentals and applying them on practice"
+date: 2025-11-01
+---
+
+import { Picture } from "astro:assets";
+import UserStoryMappingBook from "../../assets/images/user-story-mapping-book.jpg";
+
+import KanbanPlain from "../../components/KanbanPlain.astro";
+import { KanbanReact } from "../../components/KanbanReact";
+
+I'm reading a book about the user story mapping technique.
+
+<Picture
+  src={UserStoryMappingBook}
+  alt="Photo of User Story Mapping book that I'm currently reading"
+  height={400}
+  densities={[1.5, 2]}
+/>
+
+Here's it on the O’Reilly website: https://www.oreilly.com/library/view/user-story-mapping/9781491904893/
+
+I got so inspired by it, so I've started building an application to practice this
+technique. And while the data model for it is not that hard, I found myself struggling
+with the interactions. That’s because the main interaction method that I’m thinking
+of is drag and drop, and I've never had an experience with it.
+
+Let's explore the drag and drop API that browsers provide natively and build a
+small kanban board with JS only, and then with React. The main source of the
+knowledge comes from the MDN documentation, and I’ll be leaving links to relevant pages.
+
+## HTML Drag and Drop API
+
+There are 3 use cases for this API:
+
+- Dragging items into a page
+- Dragging items off the page
+- Dragging items inside the page
+
+For our example, we are interested in the last use case, but there are some parts
+that I’ll mention that will be useful for the first two use cases.
+
+There are 3 important concepts in this API as well:
+
+- Draggable element
+- Transfer data
+- Drop target
+
+Draggables are simply elements with the HTML attribute `draggable` set. For example:
+
+```html
+<p draggable="true">I can be dragged!</p>
+```
+
+Interestingly, images and links are draggable by default; we can only disable
+dragging by specifying `draggable="false"`.
+
+Transfer data can be set on a drag event when they are fired. For example, when
+starting to drag some element, we can set some metadata so that it can be read on drop.
+
+```html
+<script>
+  function handleDragStart(event) {
+    event.dataTransfer.setData("text/plain", event.target.innerText);
+  }
+</script>
+
+<p draggable="true" ondragstart="handleDragStart(event)">
+  I am draggable too!!
+</p>
+```
+
+Drop targets are some elements that have an event listener for the drop event.
+Additionally, the drop target can be outside of the page. For example, we can
+drag some element on the desktop, and this way, we can also transfer some files
+from one page to another.
+
+```html
+<script>
+  function handleDragOver(event) {
+    event.preventDefault();
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    const data = event.dataTransfer.getData("text/plain");
+    event.target.append(data);
+  }
+</script>
+
+<p ondragover="handleDragOver(event)" ondrop="handleDrop(event)">
+  I'm a drop target
+</p>
+```
+
+Notice that in the drag over event handler, I’m calling `preventDefault`, because
+without it, the drop event won’t fire.
+
+Also, drag & drop API consists of several events:
+
+- `dragstart` - it is fired on the draggable element, when user starts dragging it
+- `dragleave` - it is fired on the draggable element as well, but when then dragging stops
+- `dragover` - it is fired on the "drop zone" element, to indicate that draggable element is hovering over it
+- `drop` - it is fired on the "drop zone" element as well, when user let's go of the mouse and intent to drop currently dragging element
+
+Let's combine it all together into an example!
+
+## Plain HTML+JS implementation
+
+I was following this [MDN tutorial](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API/Kanban_board),
+but with a couple of differences.
+
+Firstly, I've defined the data model for the demo:
+
+```js
+const tasks = [
+  {
+    title: "To Do",
+    tasks: [
+      "✏️ Write introduction for blog post",
+      "🧠 Research best practices for drag & drop UX",
+    ],
+  },
+  {
+    title: "In Progress",
+    tasks: [
+      "💻 Implement drag & drop events in JavaScript",
+      "🧩 Debug card reordering logic",
+      "🧱 Build React version of the Kanban board",
+    ],
+  },
+  {
+    title: "Done",
+    tasks: [
+      "🔍 Review HTML drag & drop MDN docs",
+      "🚀 Set up project structure and tooling",
+    ],
+  },
+];
+```
+
+I've used this simple data structure for both examples.
+
+I also wrote first example as a Astro component, and it was really great to combine Tailwind and JSX, but still ending up with plain HTML and JS:
+
+```jsx
+<div class="not-prose flex flex-row gap-2 overflow-y-scroll">
+  {tasks.map(({ title, tasks }) => (
+    <div class="task-column min-w-[200px] flex-1 space-y-1.5 rounded-md border border-neutral-200 p-2 dark:border-neutral-700">
+      <h3 class="text-xl">{title}</h3>
+
+      <ul class="flex list-none flex-col gap-1 p-0">
+        {tasks.map((task) => (
+          <li
+            class="task-item cursor-grab rounded-sm border border-neutral-200 bg-white p-1 active:cursor-grabbing dark:border-neutral-700 dark:bg-black"
+            draggable={true}
+          >
+            {task}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</div>
+```
+
+And here's a JS part for the first demo:
+
+```js
+const columns = document.querySelectorAll(".task-column");
+
+for (const column of columns) {
+  column.addEventListener("dragover", (event) => {
+    if (event.dataTransfer.types.includes("task")) {
+      event.preventDefault();
+    }
+  });
+}
+
+const tasks = document.querySelectorAll(".task-item");
+
+for (const task of tasks) {
+  task.addEventListener("dragstart", (event) => {
+    task.id = "dragged-task";
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("task", "");
+    setTimeout(() => {
+      event.target.style.display = "none";
+    }, 0);
+  });
+
+  task.addEventListener("dragend", () => {
+    task.removeAttribute("id");
+    event.target.style.display = "block";
+  });
+}
+
+function createPlaceholder(draggedTask) {
+  const placeholder = draggedTask.cloneNode(true);
+  placeholder.classList.add("task-placeholder", "border-dashed");
+  placeholder.removeAttribute("id");
+  placeholder.style.display = "block";
+  return placeholder;
+}
+
+function movePlaceholder(event) {
+  const column = event.currentTarget;
+  const draggedTask = document.getElementById("dragged-task");
+  const tasks = column.children[1];
+  const existingPlaceholder = column.querySelector(".task-placeholder");
+  if (existingPlaceholder) {
+    const placeholderRect = existingPlaceholder.getBoundingClientRect();
+    if (
+      placeholderRect.top <= event.clientY &&
+      placeholderRect.bottom >= event.clientY
+    ) {
+      return;
+    }
+  }
+  for (const task of tasks.children) {
+    if (task.getBoundingClientRect().bottom >= event.clientY) {
+      if (task === existingPlaceholder) return;
+      existingPlaceholder?.remove();
+      tasks.insertBefore(
+        existingPlaceholder ?? createPlaceholder(draggedTask),
+        task,
+      );
+      return;
+    }
+  }
+  existingPlaceholder?.remove();
+  tasks.append(existingPlaceholder ?? createPlaceholder(draggedTask));
+}
+
+for (const column of columns) {
+  column.addEventListener("dragover", movePlaceholder);
+  column.addEventListener("dragleave", (event) => {
+    if (column.contains(event.relatedTarget)) return;
+    const placeholder = column.querySelector(".task-placeholder");
+    placeholder?.remove();
+  });
+
+  column.addEventListener("drop", (event) => {
+    event.preventDefault();
+
+    const draggedTask = document.getElementById("dragged-task");
+    const placeholder = column.querySelector(".task-placeholder");
+    if (!placeholder) return;
+    draggedTask.remove();
+    column.children[1].insertBefore(draggedTask, placeholder);
+    placeholder.remove();
+  });
+}
+```
+
+Most notably, I've used the `cloneNode` API to create a placeholder element, and I'm also hiding an original element during the dragging by setting `display` to `none`.
+And, of course, the main difference is that styling is done with Tailwind instead of plain CSS.
+
+Here's a demo itself for you to play around:
+
+<KanbanPlain />
+
+## React implementation
+
+For the React implementation, I've decided to use a [Drag and Drop library](https://drag-and-drop.formkit.com/), and it was such a big pleasure to work with it!
+
+Let's take a look at the component that constitute the React implementation.
+
+The first one - is the small component for a task:
+
+```tsx
+function Task({ task }: { task: string }) {
+  return (
+    <li className="cursor-grab rounded-sm border border-neutral-200 bg-white p-1 active:cursor-grabbing dark:border-neutral-700 dark:bg-black">
+      {task}
+    </li>
+  );
+}
+```
+
+The second one - is a heart of the demo - task list with drag and drop:
+
+```tsx
+function TaskList({ tasks }: { tasks: string[] }) {
+  const [parentRef, taskList] = useDragAndDrop<HTMLUListElement, string>(
+    tasks,
+    {
+      group: "kanban",
+      dragEffectAllowed: "move",
+      dropZoneClass: "!border-dashed",
+    },
+  );
+
+  return (
+    <ul ref={parentRef} className="flex flex-1 list-none flex-col gap-1 p-0">
+      {taskList.map((task) => (
+        <Task key={task} task={task} />
+      ))}
+    </ul>
+  );
+}
+```
+
+The third - is a small wrapper around a task list, just to simplify building the UI:
+
+```tsx
+function TaskColumn({ title, tasks }: { title: string; tasks: string[] }) {
+  return (
+    <div className="flex min-w-[200px] flex-1 flex-col gap-1.5 rounded-md border border-neutral-200 p-2 dark:border-neutral-700">
+      <h3 className="text-xl">{title}</h3>
+
+      <TaskList tasks={tasks} />
+    </div>
+  );
+}
+```
+
+Honestly, the `TaskColumn` component is not a strong requirement - `TaskList` and `TaskColumn` components can be merged together,
+and it'll work fine, but I prefer to make smaller components, that serve only one purpose (ideally).
+
+And the last one is the component, that brings it all together:
+
+```tsx
+export function KanbanReact() {
+  return (
+    <div className="not-prose flex flex-row gap-2 overflow-y-scroll">
+      {tasks.map(({ title, tasks }) => (
+        <TaskColumn key={title} title={title} tasks={tasks} />
+      ))}
+    </div>
+  );
+}
+```
+
+And that's it! I just love how the React and drag & drop library for it simplifies this hard-to-grasp API and
+makes everything declarative and easy to understand.
+
+Here's a demo to play around:
+
+<KanbanReact client:load />
+
+## Conclusion
+
+Today we looked at the HTML Drag and Drop API, and learned how it all works. Additionally, we've explored two distinct approaches:
+imperative and declarative, when building the drag & drop examples.
+
+Personally, I'm glad that I've started with exploring browser
+API before jumping into the React library. That's because without knowing what is the base building blocks of the drag & drop UIs
+in the browser it's easy to take the React library as magical 😅. But now, when I know how it works under the hood, I appreciate
+the work that was put into the library even more.
+
+Thank you for reading! I hope it was interesting and insightful for you just like it was for me. See you next time 👋

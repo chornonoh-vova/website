@@ -73,7 +73,7 @@ export function RandomEmojiSpawner() {
   };
 
   return (
-    <div className="not-prose relative h-[40vh] w-full touch-manipulation rounded-md border border-neutral-200 dark:border-neutral-700">
+    <div className="not-prose relative h-[50vh] w-full touch-manipulation rounded-md border border-neutral-200 dark:border-neutral-700">
       <div
         className="absolute inset-0 m-2 border border-transparent"
         inert={inert}

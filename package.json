@@ -21,6 +21,7 @@
     "@astrojs/sitemap": "^3.6.0",
     "@astrojs/vercel": "^9.0.0",
     "@datastructures-js/queue": "^4.3.0",
+    "@formkit/drag-and-drop": "^0.5.3",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "^4.1.16",

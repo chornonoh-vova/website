@@ -1,6 +1,13 @@
 import clsx from "clsx";
 import { AnimatePresence, motion, Reorder, useMotionValue } from "motion/react";
-import { useRef, useState, type ComponentPropsWithRef, type Ref } from "react";
+import {
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type ComponentPropsWithRef,
+  type Ref,
+} from "react";
 import { useRaisedShadow } from "../hooks/useRaisedShadow";
 import { Info, Trash } from "lucide-react";
 import { Button } from "./ui/Button";
@@ -350,39 +357,39 @@ export function CacheState({
 const DEFAULT_CAPACITY = 6;
 
 function useLRUCache(capacity: number, initial: [string, string][]) {
-  const cache = useRef(new LRUCache(capacity, initial));
-  const [entries, setEntries] = useState(initial.toReversed());
+  const cache = useMemo(
+    () => new LRUCache(capacity, initial),
+    [capacity, initial],
+  );
+  const [, reRender] = useReducer((x) => x + 1, 0);
 
+  const entries = cache.entries();
   const keys = entries.map(([key]) => key);
-
-  const updateEntries = () => {
-    setEntries(cache.current.entries());
-  };
 
   return {
     keys,
     entries,
     deleteKey: (key: string) => {
-      cache.current.delete(key);
-      updateEntries();
+      cache.delete(key);
+      reRender();
     },
     getValue: (key: string) => {
-      const value = cache.current.get(key);
-      updateEntries();
+      const value = cache.get(key);
+      reRender();
       return value;
     },
     setKeyValue: (key: string, value: string) => {
-      cache.current.set(key, value);
-      updateEntries();
+      cache.set(key, value);
+      reRender();
     },
     reset: () => {
-      cache.current.clear();
+      cache.clear();
 
       for (const [key, value] of initial) {
-        cache.current.set(key, value);
+        cache.set(key, value);
       }
 
-      updateEntries();
+      reRender();
     },
   };
 }
