@@ -14,7 +14,7 @@ along the way.
 
 I've briefly mentioned IndexedDB in my last week blog post, and this week I'm
 learning on how to actually use it in practice. So let's start by writing a small
-wrapper around IndexedDB that will simplify or life when working with it in the
+wrapper around IndexedDB that will simplify our life when working with it in the
 future. It might look like an abstraction just for the sake of abstraction, but
 believe me, you'll see the value in it!
 
@@ -88,7 +88,7 @@ return types are automatically inferred based on the store name as well!
 
 ## Integrating with React
 
-To connect this wrapper with React I've setup a context to provide this helper for
+To connect this wrapper with React I've set up a context to provide this helper for
 various hooks that might need it.
 
 ```tsx
@@ -120,7 +120,7 @@ I love this pattern that allows for clean usage of `useIndexedDBWrapper` hook wh
 its needed instead of doing `useContext(DatabaseContext)` everywhere. It additionally
 throws an exception and provides a hint to the TypeScript: when this hook is called,
 the result of it will never be undefined! I think it's really powerful concept, and
-it's my go to method when creating and using contexts in my apps.
+it's my go-to method when creating and using contexts in my apps.
 
 ## Wiring it up with TanStack Router & Query
 
@@ -197,7 +197,7 @@ function StoryMapsError({ error }: { error: Error }) {
 }
 ```
 
-While looking very simple, it's really powerful as well! All of the errors are
+While looking simple, it's powerful as well! All of the errors are
 caught by this error boundary, and retries are just one call away!
 
 Route component itself that uses the data and performs a mutation.
@@ -235,7 +235,7 @@ function StoryMaps() {
 ```
 
 The interesting thing here is that `storymaps` data will never be undefined, the
-responsibility of the component is pretty much only to render the data. Loading
+responsibility of the component is primarily to render the data. Loading
 state can be handled by the separate pending component, and error state is handled
 separately as well.
 
@@ -280,7 +280,7 @@ export function useAddStoryMapMutation() {
       return { prevStoryMaps };
     },
 
-    onError: (error, _variables, result, context) => {
+    onError: (error, _newStoryMap, onMutateResult, context) => {
       console.error(error);
       if (onMutateResult?.prevStoryMaps) {
         context.client.setQueryData(
@@ -290,7 +290,7 @@ export function useAddStoryMapMutation() {
       }
     },
 
-    onSettled: (_data, _error, _variables, _result, context) => {
+    onSettled: (_data, _error, _variables, _onMutateResult, context) => {
       context.client.invalidateQueries({
         queryKey: storyMapsQueryKey,
       });
@@ -310,11 +310,11 @@ The mutation here is much more involved, let's break it down:
   data to the IndexedDB. In other cases it can be a request to the backend, for example.
 - `onMutate` is a heart of the logic: it mutates the internal state of the query
   client and appends a new data that we are adding immediately, so that UI can be
-  updated even before the actual mutation is completed. It additionally saved the
+  updated even before the actual mutation is completed. It additionally saves the
   previous state to the context.
 - `onError` is a handler for errors that might happen when performing a mutation.
   Its job is to restore that previous value that we've saved to the context, because
-  at that point, something gone wrong, and our optimistic update was a wrong guess.
+  at that point, something went wrong, and our optimistic update was a wrong guess.
 - `onSettled` handler is called in both cases - when the mutation failed and when
   it succeeded. The only purpose of this handler is to request the information
   once more, just to make sure that we are displaying the correct data to the user.
