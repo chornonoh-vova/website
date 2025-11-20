@@ -26,7 +26,8 @@ const { Content, ...components } = await render(post);
 
 <Layout title={post.data.title} description={post.data.description}>
   <Prose as="article">
-    <h1>{post.data.title}</h1>
+    <h1 transition:name={`${post.id}-title`}>{post.data.title}</h1>
+    <p transition:name={`${post.id}-description`}>{post.data.description}</p>
     <FormattedDate date={post.data.date} />
     <Content components={{ ...components, a: ExternalLink }} />
     <ScrollToTop />

@@ -14,10 +14,10 @@ const { entry } = Astro.props;
   class="group flex flex-nowrap items-center gap-2 rounded-xl border border-neutral-200 py-3 pr-3 pl-5 hover:text-black focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:outline-none dark:border-neutral-700 dark:hover:text-white"
 >
   <div class="flex flex-1 flex-col gap-1 overflow-x-hidden">
-    <h3 class="font-semibold">
+    <h3 class="font-semibold" transition:name={`${entry.id}-title`}>
       {entry.data.title}
     </h3>
-    <p class="text-sm">
+    <p class="text-sm" transition:name={`${entry.id}-description`}>
       {entry.data.description}
     </p>
   </div>
