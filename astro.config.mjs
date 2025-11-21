@@ -7,9 +7,6 @@ import sitemap from "@astrojs/sitemap";
 import vercel from "@astrojs/vercel";
 import react from "@astrojs/react";
 
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-
 export default defineConfig({
   site: "https://chornonoh-vova.com",
   prefetch: true,
@@ -19,8 +16,6 @@ export default defineConfig({
   },
 
   markdown: {
-    remarkPlugins: [remarkMath],
-    rehypePlugins: [rehypeKatex],
     shikiConfig: {
       themes: {
         light: "github-light-default",
