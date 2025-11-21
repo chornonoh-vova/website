@@ -69,11 +69,17 @@ One more interesting thing to note here, is the calculation of the box index. We
 
 Let's say that we want to understand, to which box cell with row = 4 and column = 7 corresponds to.
 
-$rowOffset = (row / 3) * 3 = 3$
+```txt
+rowOffset = (row / 3) * 3 = 3
+```
 
-$colOffset = column / 3 = 2$
+```txt
+colOffset = column / 3 = 2
+```
 
-$boxIndex = rowOffset + colOffset = 5$
+```txt
+boxIndex = rowOffset + colOffset = 5
+```
 
 First part calculates offset by row, and the second part calculates offset by column, and by summing them together we get the box index.
 

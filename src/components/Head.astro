@@ -1,4 +1,5 @@
 ---
+import { ClientRouter } from "astro:transitions";
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
 import "../styles/global.css";
@@ -60,14 +61,21 @@ const pageTitle = `${title} | ${SITE_TITLE}`;
   media="(prefers-color-scheme: dark)"
 />
 
+<ClientRouter />
+
 <!-- Light/Dark mode -->
 <script is:inline>
-  document.documentElement.classList.toggle(
-    "dark",
-    localStorage.theme === "dark" ||
-      (!("theme" in localStorage) &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches),
-  );
+  function applyTheme() {
+    document.documentElement.classList.toggle(
+      "dark",
+      localStorage.theme === "dark" ||
+        (!("theme" in localStorage) &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches),
+    );
+  }
+
+  document.addEventListener("astro:after-swap", applyTheme);
+  applyTheme();
 
   window
     .matchMedia("(prefers-color-scheme: dark)")

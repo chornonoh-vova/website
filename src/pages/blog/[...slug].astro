@@ -1,7 +1,7 @@
 ---
 import type { GetStaticPaths } from "astro";
 import { render } from "astro:content";
-import { allBlogPosts } from "../../lib/posts";
+import { allBlogPosts, getReadingTime } from "../../lib/posts";
 import Prose from "../../components/Prose.astro";
 import Layout from "../../layouts/Layout.astro";
 import ExternalLink from "../../components/ExternalLink.astro";
@@ -21,14 +21,35 @@ export const getStaticPaths = (async () => {
 
 const post = Astro.props;
 
+const readingTime = getReadingTime(post.body);
+
 const { Content, ...components } = await render(post);
 ---
 
 <Layout title={post.data.title} description={post.data.description}>
   <Prose as="article">
-    <h1>{post.data.title}</h1>
-    <FormattedDate date={post.data.date} />
+    <h1 transition:name={`${post.id}-title`}>{post.data.title}</h1>
+
+    <div class="items-center justify-between md:flex">
+      <p transition:name={`${post.id}-description`}>{post.data.description}</p>
+
+      <div class="flex items-center gap-1">
+        <FormattedDate date={post.data.date} />
+        {
+          readingTime && (
+            <>
+              &bull;
+              <p class="mt-0 mb-0">{readingTime}</p>
+            </>
+          )
+        }
+      </div>
+    </div>
+
+    <hr class="mt-5 mb-5 md:mt-0" />
+
     <Content components={{ ...components, a: ExternalLink }} />
+
     <ScrollToTop />
     <NewsletterSubscribe />
     <h3>Comments</h3>

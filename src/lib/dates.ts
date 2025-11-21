@@ -1,7 +1,7 @@
 export function formatDate(date: Date) {
   return Intl.DateTimeFormat("en-US", {
     month: "short",
-    day: "2-digit",
+    day: "numeric",
     year: "numeric",
   }).format(date);
 }
