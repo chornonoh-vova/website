@@ -7,7 +7,6 @@ import Layout from "../../layouts/Layout.astro";
 import ExternalLink from "../../components/ExternalLink.astro";
 import FormattedDate from "../../components/FormattedDate.astro";
 import PostComments from "../../components/PostComments.astro";
-import ScrollToTop from "../../components/ScrollToTop.astro";
 import NewsletterSubscribe from "../../components/NewsletterSubscribe.astro";
 
 export const getStaticPaths = (async () => {
@@ -50,7 +49,6 @@ const { Content, ...components } = await render(post);
 
     <Content components={{ ...components, a: ExternalLink }} />
 
-    <ScrollToTop />
     <NewsletterSubscribe />
     <h3>Comments</h3>
     <PostComments />
