@@ -18,7 +18,7 @@ remember it from the top of my head, because there's so much hidden in these two
 simple lines. It just felt like I was doing it forever, and, quite frankly, automatically
 at that point.
 
-But what these lines do exactly? Let's break it down.
+But what do these lines do exactly? Let's break it down.
 
 ## The shebang
 
@@ -53,7 +53,7 @@ Basically, the `env` command searches the directories listed in the `$PATH` envi
 variable for the `bash` executable. And, it executes the script using the first
 `bash` interpreter it finds.
 
-These two little things allow us to do very powerful stuff, like executing the rest
+These two little things allow us to do powerful things, like executing the rest
 of the script with `perl` or `ruby`, for example:
 
 ```bash
@@ -72,13 +72,13 @@ The second line (`set -euo pipefail`) sets three options for the shell:
    if any command fails with a non-zero exit status. By default, `bash` does not
    do that! And it makes sense, because usually `bash` runs in interactive mode (i.e.
    when user inputs commands) and it would be pretty annoying if it quit after
-   every failed command 😅. But it's really important to set it for scripts, because
+   every failed command 😅. But it's important to set it for scripts, because
    almost every time, commands are meant to execute one after the other, and when
    one fails, script shouldn't be executed further. Note: it doesn’t trigger in
    every case, for example, inside `if` conditions or some compound commands. It
    catches most errors, but not all.
 2. `set -u` (can also be written as `set -o nounset`) tells bash to exit immediately
-   if it encounters an undefined variable. Pretty simple! But really important when
+   if it encounters an undefined variable. Pretty simple! But it's important when
    writing scripts, because by default it will just silently error, and just substitute
    empty string if used in string, for example. Yikes 😬
 3. `-o pipefail` tells bash to make the pipeline's exit status reflect the failure
