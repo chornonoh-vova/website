@@ -41,8 +41,8 @@ test!!!
 
 And when you execute it, it just prints itself!
 
-You've probably noticed, that instead of specifying the `/bin/bash` directly, instead
-it specifies it with `/usr/bin/env bash`, and it has a couple of benefits:
+You've probably noticed that, instead of specifying `/bin/bash` directly, it uses
+`/usr/bin/env bash`, and this has a couple of benefits:
 
 - It ensures a script can run on different systems, even if `bash` is installed
   in a non-standard location, such as in a user's home directory.
@@ -94,7 +94,7 @@ or when I'm trying to figure something out, but leave it out in "production" scr
 Read more in [this article](https://olivergondza.github.io/2019/10/01/bash-strict-mode.html)
 or in the [documentation](https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html).
 
-Omitting these options can lead to some disastrous bugs. Here's some youtube videos
+Omitting these options can lead to some disastrous bugs. Here are some YouTube videos
 that break it down:
 
 - [Steam bug, unset variable](https://www.youtube.com/watch?v=qzZLvw2AdvM)
@@ -127,7 +127,7 @@ set -euo pipefail
 
 chmod +x "$1"
 
-"$EDITOR" "$1"
+"${EDITOR:-vim}" "$1"
 ```
 
 Shout out to this [awesome blog post](https://evanhahn.com/scripts-i-wrote-that-i-use-all-the-time/)
