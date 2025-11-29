@@ -68,9 +68,9 @@ of the script with `perl` or `ruby`, for example:
 
 The second line (`set -euo pipefail`) sets three options for the shell:
 
-1. `set -e` (can also be written as `set -o errexit`) tells bash to exit immediately,
-   if a pipeline fails with non-zero exit status. By default `bash` is not doing
-   that! And it makes sense, because usually `bash` runs in interactive mode (i.e
+1. `set -e` (can also be written as `set -o errexit`) tells bash to exit immediately
+   if any command fails with a non-zero exit status. By default, `bash` does not
+   do that! And it makes sense, because usually `bash` runs in interactive mode (i.e.
    when user inputs commands) and it would be pretty annoying if it quit after
    every failed command 😅. But it's really important to set it for scripts, because
    almost every time, commands are meant to execute one after the other, and when
@@ -81,10 +81,10 @@ The second line (`set -euo pipefail`) sets three options for the shell:
    if it encounters an undefined variable. Pretty simple! But really important when
    writing scripts, because by default it will just silently error, and just substitute
    empty string if used in string, for example. Yikes 😬
-3. `-o pipefail` tells bash to fail pipeline entirely if one of the commands in
-   the pipeline failed. Again it's important to fail some commands that come later
-   in a pipeline if previous command failed. By default, only the latest command
-   status is used as a return status of an entire pipeline.
+3. `-o pipefail` tells bash to make the pipeline's exit status reflect the failure
+   status of any command in the pipeline, not just the last one. By default, only
+   the exit status of the last command in the pipeline is used as the return status
+   of the entire pipeline.
 
 Additionally, there's `set -x` or `set -o xtrace` option available, that is really
 useful for debugging, because it prints every command with expanded arguments before
