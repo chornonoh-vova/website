@@ -1,0 +1,152 @@
+---
+title: "Advent of Code 2025, part 1"
+description: "My journey through AoC 2025, days 1-6"
+date: 2025-12-01
+---
+
+import { Day1 } from "../../components/aoc-2025/Day1";
+
+Welcome to Advent of Code 2025 🎉
+
+On this page I will be documenting my struggles, solutions and, sometimes visualizations
+for days of this challenge. Let's begin!
+
+## Day 1
+
+The task is pretty straightforward (as I find it later), but I started over-complicating
+the solution, and it backfired quickly.
+
+I've solved the first part mathematically:
+
+```ts
+import { readFile } from "node:fs/promises";
+import process from "node:process";
+
+const filename = process.argv[2];
+
+const instructions = (await readFile(filename, "utf-8")).trim().split("\n");
+
+class Safe {
+  #dial: number;
+  cnt: number;
+
+  constructor(initial: number) {
+    this.#dial = initial;
+    this.cnt = 0;
+  }
+
+  turnLeft(amount: number) {
+    this.#dial = (((this.#dial - amount) % 100) + 100) % 100;
+    this.#checkCounter();
+  }
+
+  turnRight(amount: number) {
+    this.#dial = (this.#dial + amount) % 100;
+    this.#checkCounter();
+  }
+
+  #checkCounter() {
+    if (this.#dial === 0) {
+      this.cnt++;
+    }
+  }
+}
+
+const safe = new Safe(50);
+
+for (const instruction of instructions) {
+  const dir = instruction.substring(0, 1);
+  const amount = parseInt(instruction.substring(1));
+
+  if (dir === "L") {
+    safe.turnLeft(amount);
+  } else {
+    safe.turnRight(amount);
+  }
+}
+
+console.log("part 1:", safe.cnt);
+```
+
+But for the second part... Well, I couldn't figure out how to calculate everything
+essentially in one operation. So I switched back to simulating the whole process,
+and in doing so, I've simplified and refactored it a lot:
+
+```ts
+import { readFile } from "node:fs/promises";
+import { argv, exit } from "node:process";
+
+const filename = argv[2];
+
+if (!filename) {
+  console.error("expect filename");
+  exit(1);
+}
+
+const instructions = (await readFile(filename, "utf-8")).trim().split("\n");
+
+type Direction = "L" | "R";
+
+class Safe {
+  #dial: number;
+  part1: number;
+  part2: number;
+
+  constructor(initial = 50) {
+    this.#dial = initial;
+    this.part1 = 0;
+    this.part2 = 0;
+  }
+
+  turn(direction: Direction, amount: number) {
+    const dir = direction === "L" ? -1 : 1;
+
+    for (let i = 0; i < amount; ++i) {
+      this.#dial += dir;
+      this.#dial %= 100;
+
+      if (!this.#dial) {
+        this.part2++;
+      }
+    }
+
+    if (!this.#dial) {
+      this.part1++;
+    }
+  }
+}
+
+const safe = new Safe();
+
+for (const instruction of instructions) {
+  const direction = instruction.substring(0, 1) as Direction;
+  const amount = parseInt(instruction.substring(1));
+
+  safe.turn(direction, amount);
+}
+
+console.log("part 1:", safe.part1);
+console.log("part 2:", safe.part2);
+```
+
+And this was quite a good starting point for visualization, that I set out to
+implement, after seeing some inspiring visuals on Reddit.
+
+Here it is:
+
+<Day1 client:load />
+
+You can try uploading the following file, and clicking "Simulate":
+
+```txt
+L68
+L30
+R48
+L5
+R60
+L55
+L1
+L99
+R14
+L82
+```
