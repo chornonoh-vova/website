@@ -239,7 +239,7 @@ export const FloodFillVisualization = ({
         </ControlButton>
         <ColorSelect onChange={(e) => onFillChange(parseInt(e.target.value))} />
       </div>
-      <div className="grid grid-cols-[repeat(10,_24px)] justify-center gap-1">
+      <div className="grid grid-cols-[repeat(10,24px)] justify-center gap-1">
         {image.map((row, rowIdx) => {
           return row.map((pixelColor, colIdx) => (
             <motion.button
