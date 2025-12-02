@@ -11,6 +11,27 @@ Welcome to Advent of Code 2025 🎉
 On this page I will be documenting my struggles, solutions and, sometimes visualizations
 for days of this challenge. Let's begin!
 
+## Boilerplate
+
+Before we start for real though, there's some repeating code to read file that is
+passed as an argument:
+
+```ts
+import { readFile } from "node:fs/promises";
+import { argv, exit } from "node:process";
+
+const filename = argv[2];
+
+if (!filename) {
+  console.error("expect filename");
+  exit(1);
+}
+
+const input = (await readFile(filename, "utf-8")).trim();
+```
+
+Every day begins with this boilerplate, so I'll include it once at the beginning.
+
 ## Day 1
 
 The task is pretty straightforward (as I find it later), but I started over-complicating
@@ -19,12 +40,7 @@ the solution, and it backfired quickly.
 I've solved the first part mathematically:
 
 ```ts
-import { readFile } from "node:fs/promises";
-import process from "node:process";
-
-const filename = process.argv[2];
-
-const instructions = (await readFile(filename, "utf-8")).trim().split("\n");
+const instructions = input.split("\n");
 
 class Safe {
   #dial: number;
@@ -73,18 +89,6 @@ essentially in one operation. So I switched back to simulating the whole process
 and in doing so, I've simplified and refactored it a lot:
 
 ```ts
-import { readFile } from "node:fs/promises";
-import { argv, exit } from "node:process";
-
-const filename = argv[2];
-
-if (!filename) {
-  console.error("expect filename");
-  exit(1);
-}
-
-const instructions = (await readFile(filename, "utf-8")).trim().split("\n");
-
 type Direction = "L" | "R";
 
 class Safe {
@@ -150,3 +154,80 @@ L99
 R14
 L82
 ```
+
+## Day 2
+
+The second day was more straightforward to me, and it begins with parsing, which is basically to split ranges and split every range individually:
+
+```ts
+const ranges = input.split(",").map((r) => r.split("-").map(Number));
+```
+
+The first part of the puzzle - is to find the "invalid" numbers in the ranges that we've just parsed, and sum them up. Invalid number is a number in which the sequence of digits repeats twice. For example `11`, `123123` or `1122511225`. I've decided to split every number string representation in the middle and just compare two parts. Here's my implementation:
+
+```ts
+const invalid1: number[] = [];
+
+for (const [start, end] of ranges) {
+  for (let n = start; n <= end; ++n) {
+    const s = n.toString();
+    if (s.length % 2 !== 0) {
+      continue;
+    }
+
+    const [left, right] = [
+      s.substring(0, s.length / 2),
+      s.substring(s.length / 2),
+    ];
+
+    if (left === right) {
+      invalid1.push(n);
+    }
+  }
+}
+
+const part1 = invalid1.reduce((prev, curr) => prev + curr, 0);
+
+console.log("part 1:", part1);
+```
+
+Additionally, I'm skipping the odd-length numbers, as they won't have repeating sequences anyway.
+
+The second part was trickier though. Now, the sequences of numbers can repeat more than two times. For example, `121212` previously would have been considered valid, but with new rules, it will be considered invalid.
+
+To implement this logic, I'm iterating over all sizes possible (from 1 and up to `s.length / 2`) and splitting string into multiple parts. And to verify whether the number is invalid I'm comparing every part. Here's my implementation:
+
+```ts
+const invalid2: number[] = [];
+
+for (const [start, end] of ranges) {
+  for (let n = start; n <= end; ++n) {
+    const s = n.toString();
+
+    for (let size = 1; size <= Math.floor(s.length / 2); ++size) {
+      if (s.length % size !== 0) {
+        continue;
+      }
+
+      const parts: string[] = [];
+
+      for (let i = 0; i < s.length; i += size) {
+        parts.push(s.substring(i, i + size));
+      }
+
+      if (parts.every((p) => p === parts[0])) {
+        invalid2.push(n);
+        break;
+      }
+    }
+  }
+}
+
+const part2 = invalid2.reduce((prev, curr) => prev + curr, 0);
+
+console.log("part 2:", part2);
+```
+
+You can notice a sneaky little `break` after we've identified an invalid number, it is needed there to avoid counting the same number multiple times. For example, number `222222` can be split up as `['2','2','2','2','2',2']` or `['22','22','22']` or `['222','222']` which all satisfy our requirement. And in the first version I've pushed the same number multiple times 😅 Which led to over-counting.
+
+Another way to solve this issue was to store all of the invalid numbers in a `Set`, as it allows only unique numbers. But this approach is much simpler, in my opinion.
