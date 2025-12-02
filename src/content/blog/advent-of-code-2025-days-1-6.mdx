@@ -13,7 +13,7 @@ for days of this challenge. Let's begin!
 
 ## Boilerplate
 
-Before we start for real though, there's some repeating code to read file that is
+Before we start for real though, there's some repeating code to read the file that is
 passed as an argument:
 
 ```ts
@@ -157,13 +157,13 @@ L82
 
 ## Day 2
 
-The second day was more straightforward to me, and it begins with parsing, which is basically to split ranges and split every range individually:
+The second day was more straightforward to me, and it begins with parsing, which is basically splitting ranges and splitting every range individually:
 
 ```ts
 const ranges = input.split(",").map((r) => r.split("-").map(Number));
 ```
 
-The first part of the puzzle - is to find the "invalid" numbers in the ranges that we've just parsed, and sum them up. Invalid number is a number in which the sequence of digits repeats twice. For example `11`, `123123` or `1122511225`. I've decided to split every number string representation in the middle and just compare two parts. Here's my implementation:
+The first part of the puzzle is to find the "invalid" numbers in the ranges that we've just parsed, and sum them up. An invalid number is a number in which the sequence of digits repeats twice. For example `11`, `123123` or `1122511225`. I've decided to split every number's string representation in the middle and just compare two parts. Here's my implementation:
 
 ```ts
 const invalid1: number[] = [];
@@ -195,7 +195,7 @@ Additionally, I'm skipping the odd-length numbers, as they won't have repeating 
 
 The second part was trickier though. Now, the sequences of numbers can repeat more than two times. For example, `121212` previously would have been considered valid, but with new rules, it will be considered invalid.
 
-To implement this logic, I'm iterating over all sizes possible (from 1 and up to `s.length / 2`) and splitting string into multiple parts. And to verify whether the number is invalid I'm comparing every part. Here's my implementation:
+To implement this logic, I'm iterating over all possible sizes (from 1 and up to `s.length / 2`) and splitting the string into multiple parts. And to verify whether the number is invalid I'm comparing every part. Here's my implementation:
 
 ```ts
 const invalid2: number[] = [];
@@ -228,6 +228,6 @@ const part2 = invalid2.reduce((prev, curr) => prev + curr, 0);
 console.log("part 2:", part2);
 ```
 
-You can notice a sneaky little `break` after we've identified an invalid number, it is needed there to avoid counting the same number multiple times. For example, number `222222` can be split up as `['2','2','2','2','2',2']` or `['22','22','22']` or `['222','222']` which all satisfy our requirement. And in the first version I've pushed the same number multiple times 😅 Which led to over-counting.
+You can notice a sneaky little `break` after we've identified an invalid number, it is needed there to avoid counting the same number multiple times. For example, number `222222` can be split up as `['2','2','2','2','2','2']` or `['22','22','22']` or `['222','222']` which all satisfy our requirement. And in the first version I've pushed the same number multiple times 😅 Which led to over-counting.
 
 Another way to solve this issue was to store all of the invalid numbers in a `Set`, as it allows only unique numbers. But this approach is much simpler, in my opinion.
