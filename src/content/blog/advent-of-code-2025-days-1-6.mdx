@@ -244,7 +244,7 @@ It's pretty straightforward - every line is transformed into array of numbers.
 
 For the first idea, I immediately jumped into solving the problem with brute force approach, and it worked fine for 2 maximums that are required in the first part. But for the second part you need to find 12 maximums! Of course, you can write 12 `for` loops inside of one another 🙃 But I took a step back to re-think my brute-force solution and improve it to be linear.
 
-The idea is to greedily find the maximum number possible, remember it, and the start looking for maximum but from the next index of the previous one. The main catch for me in this task was to limit the index that we are looking for. For example, if we are looking for the first number, we can look up to the `batteries.length - 11` index, for second - up to `batteries.length - 10` and when looking for 12th - up to the end of the array.
+The idea is to greedily find the maximum number possible, remember it, and then start looking for maximum but from the next index of the previous one. The main catch for me in this task was to limit the index that we are looking for. For example, if we are looking for the first number, we can look up to the `batteries.length - 11` index, for second - up to `batteries.length - 10` and when looking for 12th - up to the end of the array.
 
 Here's how I implemented both parts in one function:
 
