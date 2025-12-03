@@ -231,3 +231,58 @@ console.log("part 2:", part2);
 You can notice a sneaky little `break` after we've identified an invalid number, it is needed there to avoid counting the same number multiple times. For example, number `222222` can be split up as `['2','2','2','2','2','2']` or `['22','22','22']` or `['222','222']` which all satisfy our requirement. And in the first version I've pushed the same number multiple times 😅 Which led to over-counting.
 
 Another way to solve this issue was to store all of the invalid numbers in a `Set`, as it allows only unique numbers. But this approach is much simpler, in my opinion.
+
+## Day 3
+
+On this day, the task was really interesting: find consecutive maximums in array of digits. But let's start with parsing:
+
+```ts
+const banks = input.split("\n").map((line) => line.split("").map(Number));
+```
+
+It's pretty straightforward - every line is transformed into array of numbers.
+
+For the first idea, I immediately jumped into solving the problem with brute force approach, and it worked fine for 2 maximums that are required in the first part. But for the second part you need to find 12 maximums! Of course, you can write 12 `for` loops inside of one another 🙃 But I took a step back to re-think my brute-force solution and improve it to be linear.
+
+The idea is to greedily find the maximum number possible, remember it, and then start looking for maximum but from the next index of the previous one. The main catch for me in this task was to limit the index that we are looking for. For example, if we are looking for the first number, we can look up to the `batteries.length - 11` index, for second - up to `batteries.length - 10` and when looking for 12th - up to the end of the array.
+
+Here's how I implemented both parts in one function:
+
+```ts
+function findTotalJoltage(size: number) {
+  const maximums: number[] = [];
+
+  for (const batteries of banks) {
+    let max = 0;
+    let maxIdx = -1;
+
+    for (let s = size - 1; s >= 0; --s) {
+      let maxInner = -1;
+
+      for (let i = maxIdx + 1; i < batteries.length - s; ++i) {
+        if (batteries[i] > maxInner) {
+          maxInner = batteries[i];
+          maxIdx = i;
+        }
+      }
+
+      max = max * 10 + maxInner;
+    }
+
+    maximums.push(max);
+  }
+
+  return maximums.reduce((prev, curr) => prev + curr, 0);
+}
+
+console.log("part 1:", findTotalJoltage(2));
+console.log("part 2:", findTotalJoltage(12));
+```
+
+There's also a bonus trick here: instead of converting every digit back to string, concatenating and then parsing the whole result back to number, this line:
+
+```ts
+max = max * 10 + maxInner;
+```
+
+Will instead directly add a digit to the number!
