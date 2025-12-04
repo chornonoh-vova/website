@@ -5,6 +5,7 @@ date: 2025-12-01
 ---
 
 import { Day1 } from "../../components/aoc-2025/Day1";
+import { Day4 } from "../../components/aoc-2025/Day4";
 
 Welcome to Advent of Code 2025 🎉
 
@@ -286,3 +287,122 @@ max = max * 10 + maxInner;
 ```
 
 Will instead directly add a digit to the number!
+
+## Day 4
+
+Fourth day was a breeze: I literally solved it in 10 minutes!
+
+Let's take a look how, first of all by parsing the input:
+
+```ts
+const initialGrid = input.split("\n").map((line) => line.split(""));
+```
+
+Again, the parsing is straightforward - just split the lines and then split every character.
+
+The core of the task is to iterate over all cells and identify whether the cell is accessible or not. I'm doing it with a help of trusty `directions` array which just contains the coordinate differences for all 8 neighbors. And then I'm iterating over all neighbors of the given cell and counting rolls. Here's how it looks:
+
+```ts
+const ROLL = "@";
+const EMPTY = ".";
+
+const directions = [
+  [-1, -1],
+  [-1, 0],
+  [-1, 1],
+  [0, -1],
+  [0, 1],
+  [1, -1],
+  [1, 0],
+  [1, 1],
+];
+
+function isAccessible(grid: string[][], row: number, col: number) {
+  const n = grid.length;
+  const m = grid[0].length;
+
+  let adjRolls = 0;
+
+  for (const [dr, dc] of directions) {
+    const [r, c] = [row + dr, col + dc];
+
+    if (r >= 0 && r < n && c >= 0 && c < m && grid[r][c] === ROLL) {
+      adjRolls++;
+    }
+  }
+
+  return adjRolls < 4;
+}
+```
+
+Then, for the first part, it's only a matter of iterating over all cells in a grid and keeping a count of all accessible ones:
+
+```ts
+function countAccessibleRolls(grid: string[][]) {
+  const n = grid.length;
+  const m = grid[0].length;
+
+  let accessible = 0;
+
+  for (let row = 0; row < n; ++row) {
+    for (let col = 0; col < m; ++col) {
+      if (grid[row][col] !== ROLL) {
+        continue;
+      }
+
+      if (isAccessible(grid, row, col)) {
+        accessible++;
+      }
+    }
+  }
+
+  return accessible;
+}
+
+console.log("part 1", countAccessibleRolls(initialGrid));
+```
+
+For the second part there's a twist: now we need to remove all accessible rolls until there's no accessible rolls anymore. But the implementation is straightforward: iterate over all cells, save the coordinates that we'll be removing in set, and then remove them!
+
+Here's how it looks like:
+
+```ts
+function countRemovableRolls(grid: string[][]) {
+  const n = grid.length;
+  const m = grid[0].length;
+
+  let removable = 0;
+
+  while (countAccessibleRolls(grid) !== 0) {
+    const toRemove = new Set<string>();
+
+    for (let row = 0; row < n; ++row) {
+      for (let col = 0; col < m; ++col) {
+        if (grid[row][col] !== ROLL) {
+          continue;
+        }
+
+        if (isAccessible(grid, row, col)) {
+          toRemove.add(`${row}-${col}`);
+        }
+      }
+    }
+
+    for (const rollPos of toRemove) {
+      const [row, col] = rollPos.split("-").map(Number);
+      grid[row][col] = EMPTY;
+      removable++;
+    }
+  }
+
+  return removable;
+}
+
+console.log("part 2", countRemovableRolls(initialGrid));
+```
+
+The second part reuses both functions from part 1. And I built a little interactive playground below:
+
+<Day4 client:load />
+
+In this playground, accessible rolls are marked with red color. Every time when you click "Remove" button, they will be removed, and counts of removed rolls will be increased by that amount. Count of accessible rolls will be recalculated. And, once you no longer have accessible rolls, "Remove" button will be disabled. But you can click "Reset" button to start over.
