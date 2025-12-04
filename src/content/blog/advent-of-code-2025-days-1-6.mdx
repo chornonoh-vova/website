@@ -292,7 +292,7 @@ Will instead directly add a digit to the number!
 
 Fourth day was a breeze: I literally solved it in 10 minutes!
 
-Let's take a look how, first of all by parsing the input:
+Let's take a look how, first by parsing the input:
 
 ```ts
 const initialGrid = input.split("\n").map((line) => line.split(""));
@@ -300,7 +300,7 @@ const initialGrid = input.split("\n").map((line) => line.split(""));
 
 Again, the parsing is straightforward - just split the lines and then split every character.
 
-The core of the task is to iterate over all cells and identify whether the cell is accessible or not. I'm doing it with a help of trusty `directions` array which just contains the coordinate differences for all 8 neighbors. And then I'm iterating over all neighbors of the given cell and counting rolls. Here's how it looks:
+The core of the task is to iterate over all cells and identify whether the cell is accessible or not. I'm doing it with the help of a trusty `directions` array which just contains the coordinate differences for all 8 neighbors. And then I'm iterating over all neighbors of the given cell and counting rolls. Here's how it looks:
 
 ```ts
 const ROLL = "@";
@@ -405,4 +405,4 @@ The second part reuses both functions from part 1. And I built a little interact
 
 <Day4 client:load />
 
-In this playground, accessible rolls are marked with red color. Every time when you click "Remove" button, they will be removed, and counts of removed rolls will be increased by that amount. Count of accessible rolls will be recalculated. And, once you no longer have accessible rolls, "Remove" button will be disabled. But you can click "Reset" button to start over.
+In this playground, accessible rolls are marked with red color. Every time when you click "Remove" button, they will be removed, and the count of removed rolls will be increased by that amount. Count of accessible rolls will be recalculated. And, once you no longer have accessible rolls, "Remove" button will be disabled. But you can click "Reset" button to start over.

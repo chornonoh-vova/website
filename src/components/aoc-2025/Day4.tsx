@@ -68,9 +68,11 @@ function countAccessibleRolls(grid: string[][]) {
   return accessible;
 }
 
+const initialAccessible = countAccessibleRolls(initialGrid);
+
 export function Day4() {
   const [grid, setGrid] = useState(initialGrid);
-  const [accessible, setAccessible] = useState(13);
+  const [accessible, setAccessible] = useState(initialAccessible);
   const [removed, setRemoved] = useState(0);
 
   const remove = () => {
@@ -105,7 +107,7 @@ export function Day4() {
 
   const reset = () => {
     setGrid(initialGrid);
-    setAccessible(13);
+    setAccessible(initialAccessible);
     setRemoved(0);
   };
 
