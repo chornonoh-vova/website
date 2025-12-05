@@ -406,3 +406,106 @@ The second part reuses both functions from part 1. And I built a little interact
 <Day4 client:load />
 
 In this playground, accessible rolls are marked with red color. Every time when you click "Remove" button, they will be removed, and the count of removed rolls will be increased by that amount. Count of accessible rolls will be recalculated. And, once you no longer have accessible rolls, "Remove" button will be disabled. But you can click "Reset" button to start over.
+
+# Day 5
+
+First order of business - parsing. This time input is split into two parts; “fresh” ID ranges and available IDs. They have different formats: fresh IDs are pairs of numbers separated by “-“. Available IDs are represented simply as one number per line.
+
+Here’s the code to implement parsing:
+
+```ts
+function parse(input: string) {
+  const [freshRangesStr, availableIngredientsStr] = input.split("\n\n");
+
+  const freshRanges = freshRangesStr
+    .split("\n")
+    .map((line) => line.split("-").map(Number));
+
+  freshRanges.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+
+  const availableIngredients = availableIngredientsStr.split("\n").map(Number);
+
+  return { freshRanges, availableIngredients };
+}
+```
+
+We need to find which of the available IDs are fresh. My first idea is to perform brute force: save all of the possible fresh IDs into a `Set` and iterate over all available products while identifying if they belong to a `Set` in `O(1)`.
+
+While sounding perfectly reasonable and working excellently on the example input, it fails on the full input. With an error that I’ve never seen before:
+
+```txt
+RangeError: Set maximum size exceeded
+```
+
+Turns out we can’t just put all of the numbers in a `Set` after all 😅
+
+That’s where the second idea comes into play: iterate over all available and inside iterate over all ranges, and if it falls within the range, increment the counter.
+
+But there’s a slightly different problem: now I’m double-counting, because sometimes number falls into multiple ranges simultaneously 🤔
+
+But my LeetCode grind wasn’t for nothing after all - I remembered that I solved a similar problem before: [56. Merge Intervals](https://leetcode.com/problems/merge-intervals/)
+
+Here’s the code that merges ranges:
+
+```ts
+function merge(ranges: number[][]) {
+  const merged = [ranges[0]];
+
+  for (let i = 1; i < ranges.length; i++) {
+    const lastEnd = merged[merged.length - 1][1];
+    const [nextStart, nextEnd] = ranges[i];
+
+    if (nextStart <= lastEnd) {
+      merged[merged.length - 1][1] = Math.max(lastEnd, nextEnd);
+    } else {
+      merged.push(ranges[i]);
+    }
+  }
+
+  return merged;
+}
+```
+
+The code above requires the intervals to be sorted already, that's why that sneaky sort is included in the `parse` function 😉
+
+Here’s how I implemented part 1 task:
+
+```ts
+function countFreshAvailable() {
+  const { freshRanges, availableIngredients } = parse(input);
+  const mergedFreshRanges = merge(freshRanges);
+
+  let cnt = 0;
+
+  for (const available of availableIngredients) {
+    for (const [start, end] of mergedFreshRanges) {
+      if (available >= start && available <= end) {
+        cnt++;
+      }
+    }
+  }
+
+  return cnt;
+}
+
+console.log("part 1", countFreshAvailable());
+```
+
+And with the merging implemented part 2 becomes even simpler:
+
+```ts
+function countAllFresh() {
+  const { freshRanges } = parse(input);
+  const mergedFreshRanges = merge(freshRanges);
+
+  let cnt = 0;
+
+  for (const [start, end] of mergedFreshRanges) {
+    cnt += end - start + 1;
+  }
+
+  return cnt;
+}
+
+console.log("part 2", countAllFresh());
+```
