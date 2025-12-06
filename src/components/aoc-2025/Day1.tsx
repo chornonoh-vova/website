@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../ui/Button";
+import { PlaySquare, RefreshCw } from "lucide-react";
 
 const TICK_COUNT = 100;
 const RADIUS = 220;
@@ -64,8 +65,20 @@ class Safe {
 
 const DIAL_DEFAULT = 50;
 
+const instructions = [
+  "L68",
+  "L30",
+  "R48",
+  "L5",
+  "R60",
+  "L55",
+  "L1",
+  "L99",
+  "R14",
+  "L82",
+];
+
 export function Day1() {
-  const [instructions, setInstructions] = useState<string[]>([]);
   const [dial, setDial] = useState(DIAL_DEFAULT);
   const [part1, setPart1] = useState(0);
   const [part2, setPart2] = useState(0);
@@ -77,15 +90,12 @@ export function Day1() {
   const anglePerTick = 360 / TICK_COUNT;
   const dialAngle = dial * anglePerTick;
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length === 1) {
-      setInstructions((await e.target.files[0].text()).trim().split("\n"));
-      setDial(DIAL_DEFAULT);
-      setInstruction("");
-      setPart1(0);
-      setPart2(0);
-      setData([]);
-    }
+  const reset = async () => {
+    setDial(DIAL_DEFAULT);
+    setInstruction("");
+    setPart1(0);
+    setPart2(0);
+    setData([]);
   };
 
   const simulate = () => {
@@ -127,29 +137,14 @@ export function Day1() {
   }, [data]);
 
   return (
-    <div className="not-prose mx-auto flex max-w-[500px] flex-col items-center gap-2">
-      <div className="flex flex-col gap-2 rounded-md border border-neutral-200 p-2 dark:border-neutral-700">
-        <div className="grid grid-cols-[1fr_auto] items-center gap-2">
-          <input
-            className="h-full rounded-md px-2"
-            type="file"
-            onChange={handleFileChange}
-          />
-
-          {instructions.length !== 0 && (
-            <Button onClick={simulate}>Simulate</Button>
-          )}
-        </div>
-
-        {data.length !== 0 && (
-          <code>
-            Current instruction: {instruction}
-            <br />
-            Part 1: {part1}
-            <br />
-            Part 2: {part2}
-          </code>
-        )}
+    <div className="not-prose mx-auto flex max-w-[500px] flex-col gap-2">
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button onClick={simulate}>
+          <PlaySquare className="size-3.5" /> Simulate
+        </Button>
+        <Button onClick={reset}>
+          <RefreshCw className="size-3.5" /> Reset
+        </Button>
       </div>
 
       <svg width="100%" height="100%" viewBox="0 0 500 500">
@@ -182,6 +177,18 @@ export function Day1() {
           />
         </g>
       </svg>
+
+      {data.length !== 0 && (
+        <div className="flex flex-col gap-2 self-center rounded-md border border-neutral-200 p-2 dark:border-neutral-700">
+          <code>
+            Current instruction: {instruction}
+            <br />
+            Part 1: {part1}
+            <br />
+            Part 2: {part2}
+          </code>
+        </div>
+      )}
     </div>
   );
 }
