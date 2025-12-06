@@ -90,7 +90,7 @@ export function Day1() {
   const anglePerTick = 360 / TICK_COUNT;
   const dialAngle = dial * anglePerTick;
 
-  const reset = async () => {
+  const reset = () => {
     setDial(DIAL_DEFAULT);
     setInstruction("");
     setPart1(0);
@@ -120,6 +120,7 @@ export function Day1() {
     let dialsIdx = 0;
     const intervalId = setInterval(() => {
       if (dialsIdx === data.length) {
+        clearInterval(intervalId);
         return;
       }
 
