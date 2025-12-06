@@ -140,9 +140,12 @@ export function Day4() {
         )}
       </div>
 
-      <div className="flex flex-col items-center">
-        <p>Accessible: {accessible}</p>
-        <p>Removed: {removed}</p>
+      <div className="flex flex-col gap-2 self-center rounded-md border border-neutral-200 p-2 dark:border-neutral-700">
+        <code>
+          Accessible: {accessible}
+          <br />
+          Removed: {removed}
+        </code>
       </div>
     </div>
   );

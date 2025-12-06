@@ -141,20 +141,7 @@ Here it is:
 
 <Day1 client:load />
 
-You can try uploading the following file, and clicking "Simulate":
-
-```txt
-L68
-L30
-R48
-L5
-R60
-L55
-L1
-L99
-R14
-L82
-```
+You can click "Simulate" to start an animation and "Reset" to start over.
 
 ## Day 2
 
@@ -509,3 +496,116 @@ function countAllFresh() {
 
 console.log("part 2", countAllFresh());
 ```
+
+## Day 6
+
+This day was tough 😅 First part was relatively simple, here's a parser to parse input for the first part:
+
+```ts
+function parse1(input: string) {
+  let lines = input.split("\n");
+
+  const parsed = lines
+    .slice(0, -1)
+    .map((line) => line.trim().split(/\s+/).map(Number));
+
+  const operations = lines[lines.length - 1].trim().split(/\s+/);
+
+  const nums: number[][] = [];
+
+  for (let i = 0; i < operations.length; ++i) {
+    const col: number[] = [];
+
+    for (let j = 0; j < parsed.length; ++j) {
+      col.push(parsed[j][i]);
+    }
+
+    nums.push(col);
+  }
+
+  return { nums, operations };
+}
+```
+
+And the function that calculates the final results (after many iterations I made it so it works for the both parts):
+
+```ts
+function calculate({
+  nums,
+  operations,
+}: {
+  nums: number[][];
+  operations: string[];
+}) {
+  return nums
+    .map((col, idx) => {
+      let total = col[0];
+      const op = operations[idx];
+
+      for (let i = 1; i < col.length; ++i) {
+        if (op === "+") {
+          total += col[i];
+        } else if (op === "*") {
+          total *= col[i];
+        }
+      }
+
+      return total;
+    })
+    .reduce((prev, curr) => prev + curr, 0);
+}
+```
+
+Here's how I'm invoking everything:
+
+```ts
+console.log(calculate(parse1(input)));
+```
+
+But for the second part, parsing was tough. I had to take a break and go to the gym, and honestly - I'm thankful that I did. Because I was able to think about the problem more and "write" the pseudocode in the Notes on my phone. And after I got back to my laptop, I basically implemented my idea in like 15-20 minutes.
+
+Here's my implementation for the second part:
+
+```ts
+function parse2(input: string) {
+  let lines = input.split("\n");
+
+  const operations = lines[lines.length - 1].trim().split(/\s+/);
+
+  lines = lines.slice(0, -1);
+
+  const nums: number[][] = Array.from({ length: operations.length }, () => []);
+
+  let curr = 0;
+
+  for (let i = 0; i < operations.length; ++i) {
+    while (curr < lines[0].length) {
+      let num = "";
+
+      for (let j = 0; j < lines.length; ++j) {
+        num += lines[j][curr];
+      }
+
+      curr++;
+
+      num = num.trim();
+
+      if (!num) break;
+
+      nums[i].push(Number(num));
+    }
+  }
+
+  return { nums, operations };
+}
+```
+
+And the invocation looks really similar:
+
+```ts
+console.log(calculate(parse2(input)));
+```
+
+## Wrap up
+
+Six days down, many more to go. If the cephalopods, rolls of papers, and safe dials are any indication, Advent of Code 2025 is just warming up. My brain may already be slightly overclocked — but that’s part of the fun. See you in the next batch of puzzles!
