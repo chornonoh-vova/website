@@ -5,7 +5,7 @@ date: 2025-12-13
 ---
 
 This blog post is part 2 of the mini-series dedicated to the Advent of Code 2025.
-The first part can be found [here](/blog/advent-of-code-2025-days-1-6).
+The first part can be found [in the previous post](/blog/advent-of-code-2025-days-1-6).
 
 I felt like the difficulty of the puzzles increased a lot the last couple of days
 😅. But let's start with day 7.
@@ -320,7 +320,7 @@ console.log("part 1", findMaxArea(input));
 
 In the example above the code is pretty simple - just looking at max areas of all
 possible pairs of points. But the second part adds a simple condition that makes
-it so much harder - now we can only look for triangles inside of some polygon.
+it so much harder - now we can only look for rectangles (areas between pairs of points) inside of some polygon.
 
 Thanks to my colleague we were able to write a hacky solution based on a lot of
 math around intersections of lines idea that we had.
@@ -328,9 +328,8 @@ math around intersections of lines idea that we had.
 By researching later I found that this problem is pretty common in game development,
 and the simple way to solve it is ray casting. Essentially, when we cast a ray from
 some point we can count the number of intersections with the polygon, and if it's
-odd, then the point is inside, if there are not intersections or number of them
+odd, then the point is inside, if there are no intersections or the number
 is even - point is outside of the polygon.
-
 Well, this is day #2 that I need to come back to later.
 
 ## Day 10
@@ -399,7 +398,7 @@ function parse(input: string): Machine[] {
     }
 
     const lightButtons: number[] = [];
-    const joltageButtons: number[][] = [];
+
 
     for (let i = 1; i < parts.length; ++i) {
       const part = parts[i];
@@ -559,7 +558,7 @@ improves memory usage and runtime performance.
 ## Day 12
 
 Day 12 was ... something else. When I initially read it I was shocked, I didn't
-even know how to approach it. But I did some brain-storming with my friends and
+even know how to approach it. But I did some brainstorming with my friends and
 just kept on unrolling the problem:
 
 - parsing the elements and the regions
