@@ -12,16 +12,16 @@ Here's an example workflow when I'm working on a new feature:
 
 1. Add a key `feature.example.title` with value `Feature example title` to the
    file with `en` translations.
-2. Add a same key but with prefix `*EN*` to all other language files.
+2. Add the same key but with prefix `*EN*` to all other language files.
 3. Wait for the localization team to translate all of the prefixed keys.
 4. Update now correctly translated strings.
 
-Looks straightforward, isn't it?
+Looks straightforward, doesn't it?
 
-But when translation files grow to a couple of thousand lines it became quite a
+But when translation files grow to a couple of thousand lines it becomes quite a
 challenge to find all of the places where you needed to add/update or sometimes
 remove a translation altogether. And while we developers don't have any
-control on how the localization team translate this stuff, it occurred to me that
+control on how the localization team translates this stuff, it occurred to me that
 I can automate the first and second steps of the workflow!
 
 And in parallel to working on new features I developed a small CLI utility to do
