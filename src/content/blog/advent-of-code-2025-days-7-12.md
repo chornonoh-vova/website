@@ -369,7 +369,7 @@ class Machine {
       best.set(lights, presses);
 
       for (const button of this.lightButtons) {
-         queue.enqueue({
+        queue.enqueue({
           lights: lights ^ button,
           presses: presses + 1,
         });
@@ -398,7 +398,6 @@ function parse(input: string): Machine[] {
     }
 
     const lightButtons: number[] = [];
-
 
     for (let i = 1; i < parts.length; ++i) {
       const part = parts[i];
