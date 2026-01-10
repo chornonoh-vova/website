@@ -13,7 +13,7 @@ Let's take a look at the problematic code:
 export const formatTimeString = (timeString: string): string => {
   if (!timeString) return "";
 
-  //HH:mm AM/PM to hh:mm:ss
+  // HH:mm AM/PM to hh:mm:ss
   const parsedTime = new Date(format(new Date(), "yyyy-MM-dd ") + timeString);
   if (!parsedTime.getDate()) return "";
 
@@ -51,7 +51,7 @@ out, which highlights all of the weirdness with `Date` parsing in JS.
 
 ## The fix
 
-To fix this issue, I've opted out of the builtin `Date` parsing, and utilized
+To fix this issue, I've opted out of the built-in `Date` parsing, and utilized
 [date-fns](https://date-fns.org/) instead. `date-fns` does not delegate parsing
 to the underlying JS engine. It parses the string itself, making the result
 deterministic across browsers.
