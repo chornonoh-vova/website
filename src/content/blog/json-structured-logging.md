@@ -79,7 +79,7 @@ But with structured logs, there's one and only one way to add them - a JSON fiel
 
 For example, I went through multiple services, and embedded correlation
 ids to every message, and, suddenly, I have a way to track down the whole flows
-even across mutliple microservices!
+even across multiple microservices!
 
 Here's an example:
 
