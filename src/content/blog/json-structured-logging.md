@@ -29,7 +29,7 @@ logging:
       file: ecs
 ```
 
-Usually, these are the benefits that everybody talking about:
+Usually, these are the benefits that everybody talks about:
 
 - they are machine-friendly: easier to parse, filter, and aggregate
 - consistent structure
@@ -72,8 +72,7 @@ correlationId = {uuid}
 ```
 
 These subtle differences add up quickly, and most of the time I've resorted to
-just filter messages that just _included_ certain ID, and discarded unrelated
-ones.
+filtering messages that _include_ a certain ID, and discarding unrelated ones.
 
 But with structured logs, there's one and only one way to add them - a JSON field!
 
