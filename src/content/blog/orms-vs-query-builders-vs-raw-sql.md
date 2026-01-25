@@ -107,7 +107,7 @@ for (Book book : books) {
 Well, if you had 50 books there will be 1 query to get all books and one query
 for each book to get the author. It's an example of classic N+1 problem.
 
-That's where you need to know a nitty gritty details of how Hibernate works, to
+That's where you need to know a nitty-gritty details of how Hibernate works, to
 write the optimized solution:
 
 ```java
@@ -122,7 +122,7 @@ With Hibernate, the number of queries often depends not on the repository method
 but on how the returned objects are accessed later. This makes performance
 characteristics implicit and sometimes surprising.
 
-But sometimes - you have to do something outside of the box - that ORM disallows
+But sometimes - you have to do something outside the box - that ORM disallows
 or can't do cleanly. That's where in my experience I used JPQL or raw SQL as
 a fallback, and again that didn't scale well with an amount of dynamic query
 building that I had to do. To be able to cope with a complexity my team implemented
@@ -130,7 +130,7 @@ an in-house query builder.
 
 ## Query builders
 
-That's where we can talk about query builders. I'm using one more and more in my
+That's where query builders come in. I'm using them more and more in my
 side project, and I think it can be a perfect middle ground. In the past I've used
 [knex](https://knexjs.org/), but now I'm using [kysely](https://kysely.dev/).
 
@@ -170,7 +170,7 @@ In runtime, this query will be "compiled" to:
 SELECT
     "book".*,
     COALESCE("readingRun"."completedPages", 0) AS "completedPages",
-    COALESCE("readingRun"."updatedAt", "book"."updatedAt") AS "lastUpdatedAt",
+    COALESCE("readingRun"."updatedAt", "book"."updatedAt") AS "lastUpdatedAt"
 FROM
     "book"
     LEFT JOIN LATERAL (
@@ -212,7 +212,7 @@ literally do anything!
 
 This is one of the pain points of the Hibernate that I have currently: my team
 writes migrations in the plain SQL files, and you have to be extra careful with
-the schema-to-entity mapping. And on top of that, every once in a while a business-logic
+the schema-to-entity mapping. Additionally, every once in a while a business-logic
 heavy migration needs to be written, that you can only write in Java. At that point
 we have to juggle both SQL and Java migrations at the same time 😅
 
