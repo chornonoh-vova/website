@@ -1,0 +1,20 @@
+---
+import IconLink from "./IconLink.astro";
+import GitHubLight from "../assets/icons/github_light.svg?url";
+import GitHubDark from "../assets/icons/github_dark.svg?url";
+
+type Props = {
+  href: string;
+};
+
+const props = Astro.props;
+---
+
+<IconLink href={props.href}>
+  <picture>
+    <source srcset={GitHubLight} media="(prefers-color-scheme: light)" />
+    <source srcset={GitHubDark} media="(prefers-color-scheme: dark)" />
+    <img width={18} height={18} src={GitHubLight} alt="" />
+  </picture>
+  <slot />
+</IconLink>
