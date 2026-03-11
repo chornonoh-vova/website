@@ -24,10 +24,6 @@ export default defineConfig({
     },
   },
 
-  experimental: {
-    headingIdCompat: true,
-  },
-
   integrations: [
     mdx({
       optimize: {
