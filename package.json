@@ -13,41 +13,41 @@
     "svg-colors": "node --experimental-transform-types ./scripts/svg-colors.ts"
   },
   "dependencies": {
-    "@astrojs/check": "^0.9.7",
-    "@astrojs/mdx": "^5.0.0",
-    "@astrojs/react": "^5.0.0",
+    "@astrojs/check": "^0.9.8",
+    "@astrojs/mdx": "^5.0.2",
+    "@astrojs/react": "^5.0.1",
     "@astrojs/rss": "^4.0.17",
     "@astrojs/sitemap": "^3.7.1",
-    "@astrojs/vercel": "^10.0.0",
+    "@astrojs/vercel": "^10.0.2",
     "@datastructures-js/queue": "^4.3.0",
     "@formkit/drag-and-drop": "^0.5.3",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.19",
-    "@tailwindcss/vite": "^4.2.1",
-    "@vercel/analytics": "^2.0.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "astro": "^6.0.2",
+    "astro": "^6.0.8",
     "clsx": "^2.1.1",
     "lucide-react": "^0.577.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-to-string": "^4.0.0",
-    "motion": "^12.35.2",
+    "motion": "^12.38.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "reading-time": "^1.5.0",
-    "tailwindcss": "^4.2.1"
+    "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/parser": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "husky": "^9.1.7",
-    "lint-staged": "^16.3.3",
+    "lint-staged": "^16.4.0",
     "prettier": "^3.8.1",
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.0"
+    "typescript-eslint": "^8.57.1"
   }
 }
