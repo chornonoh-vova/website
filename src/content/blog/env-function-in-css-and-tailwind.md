@@ -16,10 +16,10 @@ this CSS:
 }
 ```
 
-This is an example of the player that is positioned at the bottom of the user screen.
+This is an example of the player that is positioned at the bottom of the user's screen.
 
-It works like a charm for regular websites. But recently I've encountered problem
-with this approach in PWA.
+It works like a charm for regular websites. But recently I've encountered a problem
+with this approach in a PWA.
 
 Screens (especially mobile) aren't perfect rectangles. They have curved corners
 and cutouts. And our full-screen apps need to account for that (it's usually not
@@ -27,7 +27,7 @@ a problem when website or app is viewed inside of the browser).
 
 Modern CSS has a solution for this problem: [env()](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Values/env)
 
-Here's how It can by used:
+Here's how it can be used:
 
 ```css
 .player {
@@ -45,7 +45,7 @@ pre-defined.
 By doing this, I made sure that my floating element in the app remains visible at
 all times, without being cut out.
 
-One important part, though it this meta tag in HTML:
+One important part is this meta tag in HTML:
 
 ```html
 <meta
@@ -54,7 +54,7 @@ One important part, though it this meta tag in HTML:
 />
 ```
 
-This part (`viewport-fit=cover`) tells that webpage will fill the entire screen.
+This part (`viewport-fit=cover`) tells the browser that the webpage will fill the entire screen.
 Without it, browsers typically constrain the webpage to the safe area.
 
 Furthermore, because I’m using tailwind, I’ve added such utility classes:
@@ -73,8 +73,8 @@ Furthermore, because I’m using tailwind, I’ve added such utility classes:
 }
 ```
 
-Sure, I could've just wrote `bottom-[env(safe-area-inset-bottom)]` everywhere I
-need to, and this approach will work the same way, but I personally prefer having
-a dedicated utility classes just for that, instead of complicating markup with
+Sure, I could've just written `bottom-[env(safe-area-inset-bottom)]` everywhere I
+need to, and this approach would work the same way, but I personally prefer having
+dedicated utility classes just for that, instead of complicating markup with
 such long custom class names. It's much better to write `bottom-safe` instead of
 that monstrosity 😅
