@@ -11,7 +11,7 @@
     "check": "astro check",
     "lint": "eslint .",
     "fmt": "prettier --write --ignore-unknown .",
-    "svg-colors": "node --experimental-transform-types ./scripts/svg-colors.ts"
+    "svg-colors": "bun --experimental-transform-types ./scripts/svg-colors.ts"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.8",
