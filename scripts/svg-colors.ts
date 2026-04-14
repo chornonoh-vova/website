@@ -18,7 +18,7 @@ const filename = argv[2];
 
 if (!filename) {
   throw new Error(
-    "missing filename\nUsage: node ./scripts/svg-colors.ts <filename>",
+    "missing filename\nUsage: bun ./scripts/svg-colors.ts <filename>",
   );
 }
 
