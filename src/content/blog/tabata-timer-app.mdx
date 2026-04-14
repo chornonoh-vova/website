@@ -1,0 +1,404 @@
+---
+
+title: "Building a tabata timer: state machines, wake locks, and haptic feedback"
+description: "Building tabata timer app"
+date: 2026-04-14
+---
+
+import Figure from "../../components/Figure.astro";
+
+import TabataStateMachine from "../../assets/images/tabata-state-machine.svg";
+import TabataTimeline from "../../assets/images/tabata-timeline.svg";
+
+My trainer loves giving me Tabata workouts — short, high-intensity rounds of work
+with rest in-between. There can be prepare and cooldown phases, but they're optional.
+
+Here's how it looks on a timeline (example consists of 3 rounds):
+
+<Figure caption="Tabata timeline">
+  <TabataTimeline class="mx-auto" />
+</Figure>
+
+So I've decided to build a small web app for it, and learn something new in the meantime.
+
+## State
+
+First of all, tabata consists of multiple phases, and we can describe that with a TS
+union type:
+
+```ts
+export type Phase = "prepare" | "work" | "rest" | "cooldown" | "done";
+```
+
+For each of the phases, we need to count down the timer. And we need to know how long each
+phase should take. For that, I've created a config type:
+
+```ts
+export type Config = {
+  prepare: number;
+  work: number;
+  rest: number;
+  rounds: number;
+  cooldown: number;
+};
+```
+
+If a phase duration is omitted, it defaults to `0` — meaning that phase is skipped.
+
+To assemble all of this - I've created a state type - this is a central piece:
+
+```ts
+export type State = {
+  phase: Phase;
+  timeLeft: number;
+  round: number;
+  isRunning: boolean;
+  config: Config;
+};
+```
+
+It has a current phase, how much time is left in the current phase, what round we are on
+and whether the timer is running or not (to support timer pause). I've also added config
+to the state so that `nextPhase` can read durations directly when transitioning — no prop
+drilling needed.
+
+## State machine
+
+With all of the types in place, now let's think about the actual logic of the tabata. A state
+machine models a system that can only be in one of a finite set of states at any time, with
+explicit rules for moving between them. And there's a natural way to think about tabata as one.
+
+Here's a diagram of how it looks:
+
+<Figure caption="Tabata state machine">
+  <TabataStateMachine class="mx-auto" />
+</Figure>
+
+We can define a function `nextPhase` that will get a current state as an input and will return the new state
+depending only on the current state:
+
+```ts
+function nextPhase(state: State): State {
+  switch (state.phase) {
+    case "prepare":
+      return {
+        ...state,
+        phase: "work",
+        timeLeft: state.config.work,
+      };
+    case "work": {
+      if (state.round === state.config.rounds) {
+        return state.config.cooldown > 0
+          ? { ...state, phase: "cooldown", timeLeft: state.config.cooldown }
+          : { ...state, phase: "done", isRunning: false };
+      }
+
+      return {
+        ...state,
+        phase: "rest",
+        timeLeft: state.config.rest,
+      };
+    }
+    case "rest":
+      return {
+        ...state,
+        phase: "work",
+        round: state.round + 1,
+        timeLeft: state.config.work,
+      };
+    case "cooldown":
+      return {
+        ...state,
+        phase: "done",
+        isRunning: false,
+      };
+    case "done":
+      return state;
+    default:
+      return state;
+  }
+}
+```
+
+In functional programming, this is called a pure function — its output depends only on its
+input, with no side effects. That means you can unit test every transition without rendering
+a single component.
+
+To wire up this into a React app I first thought about `useState` (multiple or one storing the entire state),
+but it looked cumbersome to deal with, and then I remembered - `useReducer` exists. It's one of those underrated
+hooks that is extremely useful in this situation! It gives us a `dispatch` function that sends actions to a
+reducer — exactly the pattern our state machine needs.
+
+Let's take a look at the React hook for tabata timer:
+
+```ts
+type Action = { type: "PLAY" } | { type: "PAUSE" } | { type: "TICK" };
+
+function init(config: Config): State {
+  return {
+    phase: config.prepare > 0 ? "prepare" : "work",
+    timeLeft: config.prepare > 0 ? config.prepare : config.work,
+    round: 1,
+    isRunning: true,
+    config,
+  };
+}
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case "PLAY":
+      return { ...state, isRunning: true };
+    case "PAUSE":
+      return { ...state, isRunning: false };
+    case "TICK":
+      if (!state.isRunning) return state;
+
+      if (state.timeLeft === 0) {
+        return nextPhase(state);
+      }
+
+      return {
+        ...state,
+        timeLeft: Math.max(0, state.timeLeft - 1),
+      };
+    default:
+      return state;
+  }
+}
+
+export function useTabataTimer(config: Config) {
+  const [state, dispatch] = useReducer(reducer, config, init);
+
+  useEffect(() => {
+    if (!state.isRunning) return;
+
+    const id = setInterval(() => {
+      dispatch({ type: "TICK" });
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [dispatch, state.isRunning]);
+
+  const pause = () => {
+    dispatch({ type: "PAUSE" });
+  };
+
+  const play = () => {
+    dispatch({ type: "PLAY" });
+  };
+
+  return {
+    state,
+    pause,
+    play,
+  };
+}
+```
+
+The reducer handles only 3 actions: `TICK`, `PLAY` and `PAUSE`, there's only one `useEffect`
+driving the whole state machine - it just emits `TICK` action every second - and then
+`reducer` and `nextPhase` take care of all of the logic of the tabata. `play` and `pause`
+functions are the simplest ones - they just pause or continue the timer by flipping one flag.
+
+## User interface
+
+UI is simply using the current state of the tabata timer that I'm exposing in a hook, and rendering
+elements depending on what the current phase is.
+
+```tsx
+const icons: Record<Phase, ReactNode> = {
+  prepare: <HugeiconsIcon icon={HourglassIcon} />,
+  work: <HugeiconsIcon icon={DumbbellIcon} />,
+  rest: <HugeiconsIcon icon={PauseCircleIcon} />,
+  cooldown: <HugeiconsIcon icon={BeachIcon} />,
+  done: <HugeiconsIcon icon={CheckmarkCircle02Icon} />,
+};
+
+export function TabataScreen({ onBack }: { onBack: () => void }) {
+  const { config } = useConfig();
+  const { state, pause, play } = useTabataTimer(config);
+
+  const isActive = state.isRunning && state.phase !== "done";
+
+  useWakeLock(isActive);
+  useFeedback(state);
+
+  const timeTotal =
+    state.config.prepare +
+    (state.config.work + state.config.rest) * (state.config.rounds - 1) +
+    state.config.work +
+    state.config.cooldown;
+
+  const timeElapsed = getElapsedTime(state);
+
+  return (
+    <div className="flex h-full w-full max-w-sm flex-col gap-2 rounded-4xl border p-4 sm:max-w-full">
+      <div className="flex w-full items-center justify-between gap-2 text-2xl">
+        <h2 className="inline-flex items-center gap-1">
+          {icons[state.phase]}
+          {state.phase}
+        </h2>
+        <p>
+          {state.round}/{state.config.rounds}
+        </p>
+      </div>
+      {state.phase !== "done" && (
+        <>
+          <Progress value={(timeElapsed / timeTotal) * 100}>
+            <ProgressLabel>Total progress</ProgressLabel>
+            <ProgressValue />
+          </Progress>
+          {state.timeLeft ? (
+            <p className="my-auto self-center text-8xl">
+              {formatTime(state.timeLeft)}
+            </p>
+          ) : (
+            <p className="my-auto self-center text-5xl">
+              Next: {state.phase === "prepare" && "Work"}
+              {state.phase === "work" &&
+                state.round < state.config.rounds &&
+                "Rest"}
+              {state.phase === "work" &&
+                state.round === state.config.rounds &&
+                (state.config.cooldown ? "Cooldown" : "Done")}
+              {state.phase === "rest" && "Work"}
+            </p>
+          )}
+          {state.isRunning ? (
+            <Button onClick={pause}>Pause</Button>
+          ) : (
+            <Button onClick={play}>Continue</Button>
+          )}
+        </>
+      )}
+      {state.phase === "done" && (
+        <ul className="my-auto self-center text-center text-xl">
+          <li>✅ {state.config.rounds} rounds completed</li>
+          <li>
+            🔥 Total work: {formatTime(state.config.work * state.config.rounds)}
+          </li>
+          <li>⏱️ Total time: {formatTime(timeTotal)}</li>
+        </ul>
+      )}
+      <Button variant="outline" onClick={onBack}>
+        <HugeiconsIcon icon={ArrowTurnBackwardIcon} />
+        Back
+      </Button>
+    </div>
+  );
+}
+```
+
+You can notice additional hooks that I didn't talk about - `useWakeLock` and `useFeedback`. Let's talk about them in more detail.
+
+## Screen Wake Lock API
+
+When I was testing an app after writing the core logic I noticed the screen dimming after a certain time.
+Of course I could dig into the settings and disable that, but I didn't want to do that, because I find
+this feature particularly useful to save the battery.
+
+And I started wondering: How other apps such as Instagram or Netflix keep your screen _awake_?
+
+And the answer is (for web development at least) - is a Screen Wake Lock API. This API communicates
+with the device's power management system, preventing the screen from dimming or locking while the
+timer is active.
+
+And the implementation of it is pretty simple:
+
+```ts
+export function useWakeLock(isActive: boolean) {
+  useEffect(() => {
+    let lock: WakeLockSentinel | null = null;
+
+    async function request() {
+      try {
+        if ("wakeLock" in navigator) {
+          lock = await navigator.wakeLock.request("screen");
+        }
+      } catch (err) {
+        console.error("Wake lock failed", err);
+      }
+    }
+
+    if (isActive) {
+      request();
+    }
+
+    return () => {
+      lock?.release();
+      lock = null;
+    };
+  }, [isActive]);
+}
+```
+
+Central piece is `WakeLockSentinel` object that is being requested as soon as timer becomes active
+and is released as soon as it's inactive.
+
+## Feedback
+
+The second piece that makes the app feel alive - is sound & haptic feedback. For that I wrote a small hook
+to do exactly that: for the last 3 seconds of phases play sounds and vibrations.
+
+```ts
+const tickAudio = new Audio("/sounds/tick.mp3");
+const phaseAudio = new Audio("/sounds/phase.mp3");
+
+function playTick() {
+  tickAudio.currentTime = 0;
+  tickAudio.play();
+}
+
+function playPhaseChange() {
+  phaseAudio.currentTime = 0;
+  phaseAudio.play();
+}
+
+function vibrateShort() {
+  if ("vibrate" in navigator) {
+    navigator.vibrate(50);
+  }
+}
+
+function vibrateLong() {
+  if ("vibrate" in navigator) {
+    navigator.vibrate([100, 50, 100]);
+  }
+}
+
+export function useFeedback(state: State) {
+  const isCountdownPhase =
+    state.phase === "prepare" ||
+    state.phase === "work" ||
+    state.phase === "rest";
+
+  useEffect(() => {
+    if (!state.isRunning) return;
+    if (!isCountdownPhase) return;
+
+    if (state.timeLeft > 0 && state.timeLeft <= 3) {
+      playTick();
+      vibrateShort();
+    }
+
+    if (state.timeLeft === 0) {
+      playPhaseChange();
+      vibrateLong();
+    }
+  }, [isCountdownPhase, state.timeLeft, state.phase, state.isRunning]);
+}
+```
+
+## Conclusion
+
+This was a fun little project that touched more APIs and patterns than I expected. A tabata
+timer sounds simple, but getting it right meant thinking about state transitions, hardware
+APIs, and sensory feedback — things that make the difference between a demo and something
+you'd actually use at the gym.
+
+If I continue building on this, I'd like to explore adding custom workout presets and maybe
+service worker support for offline use.
+
+Full source code of the app is on [GitHub](https://github.com/chornonoh-vova/tabata-timer).
+
+And you can open the app [here](https://chornonoh-vova.github.io/tabata-timer/).
