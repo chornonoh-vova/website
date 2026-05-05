@@ -1,0 +1,133 @@
+---
+title: "Building worklog, a CLI for my daily reports"
+description: "From idea to a simple but incredibly useful personal tool"
+date: 2026-05-05
+---
+
+import Figure from "../../components/Figure.astro";
+
+import WorklogArchitecture from "../../assets/images/worklog-architecture.svg";
+
+Every month, at the end, I sit down to write what I worked on this month. Every standup I scramble to remember what I did yesterday. The data is all in GitHub (PRs, reviews, comments), but a list of titles isn't a report. Skimming the PR list and rewriting it as prose was eating hours every time.
+
+So I built `worklog`. One argument: a date. One output: a clean, grouped summary I can paste into Slack.
+
+```bash
+GITHUB_TOKEN=$(gh auth token) worklog 2026-04-01
+```
+
+Here's how it got there.
+
+## The first sketch
+
+I started with the laziest thing that could work: one file, one fetch, pipe the result into Claude.
+
+```bash
+GITHUB_TOKEN=$(gh auth token) bun index.ts 2026-04-01 | claude --model haiku -p
+```
+
+The script just queried GitHub's GraphQL API for `pullRequestContributionsByRepository` and `pullRequestReviewContributionsByRepository`, shaped them into `{ repo: { prs, reviews } }` object, and printed a prompt to stdout. The shell handled the rest.
+
+It worked on the first try, which I take as a sign the idea is right and the implementation is wrong.
+
+## Making it one command
+
+Two-stage shell pipelines are fine when you're prototyping, but I wanted to type `worklog 2026-04-01` and be done. So I split the script into modules — `github.ts`, `transform.ts`, `claude.ts` — and replaced the pipe with `Bun.spawn`. Same external behavior, one binary.
+
+I briefly considered using the Anthropic SDK directly. But that needs a console API key with separate billing, and my Claude.ai subscription doesn't extend to the SDK. Spawning the claude CLI uses my existing Claude Code auth, which is exactly what I want. The subprocess startup costs maybe 50ms against multi-second model calls, so I stopped worrying about it.
+
+The architecture at this point looks roughly like this:
+
+<Figure caption="Worklog architecture">
+  <WorklogArchitecture class="mx-auto" />
+</Figure>
+
+Four boundaries: `argv` from the user, a SQLite file on disk, GitHub's GraphQL endpoint, the `claude` subprocess. Everything else is internal plumbing.
+
+## The prompt was the hard part
+
+Here's what I didn't expect: the actual code was easy. The prompt was where I spent most of my time.
+
+My first prompt was the kind of thing you'd write if you'd never used an LLM before:
+
+```txt
+You are generating a concise daily work report for a software engineer.
+Be professional and clear. Group related work. Format as plain text.
+```
+
+Output was wildly inconsistent run to run. Sometimes repository names were `worklog`, sometimes `WORKLOG`, sometimes `Worklog`. Sometimes lists used `-`, sometimes `*`, sometimes nothing. Sometimes there was a header, sometimes not.
+
+More rules didn't help. What worked was a template plus an example. I gave Claude the exact shape I wanted, and one filled-in version to mirror:
+
+```txt
+<repository-name-exactly-as-given>
+Authored:
+- <one-line description>
+Reviewed:
+- <one-line description>
+
+Example:
+
+worklog
+Authored:
+- Added spinner utility for CLI feedback
+Reviewed:
+- Approved getting-started guide updates
+```
+
+Plus a few specific bans: no markdown, no bold, always `-` for bullets, and use the repository name verbatim. Output got much more stable.
+
+I also sorted the repositories alphabetically in the transform layer before serializing, so the model gets them in a deterministic order. Small thing, but it eliminated a class of "why does the order keep changing" runs.
+
+## Caching, because Claude isn't free
+
+Two things made caching feel necessary.
+
+First, even on Haiku, summarization takes a few seconds. When I'm re-checking yesterday's report for a standup, those seconds add up.
+
+Second, and this is the one that pushed me over: re-running the same date produced different summaries every time. Which is fine in isolation, but if I'd already pasted Monday's report into a doc and then re-ran it on Wednesday to add Tuesday, the Monday section would now read differently. At that point it's a hallucination treadmill, not a report.
+
+So I added a SQLite cache. `bun:sqlite` is built into Bun, so there's nothing to install and the binary still compiles to a single file.
+
+```sql
+CREATE TABLE IF NOT EXISTS worklogs (
+  date    TEXT PRIMARY KEY,
+  summary TEXT NOT NULL
+);
+```
+
+Two functions, `getCached` and `setCached`, behind prepared statements. The DB lives at `~/.worklog.db`.
+
+The flow now: on a cache hit, print the stored summary instantly. If we're in a TTY, ask Regenerate? [y/N]. If not (output is being piped or redirected), just print and exit. On miss, run the pipeline and store the result. Cache writes only happen after the LLM call succeeds, so a network blip never poisons the cache with a half-baked report.
+
+The interactive prompt is `node:readline/promises` writing to `stderr`, which keeps `stdout` clean for piping.
+
+## What it looks like now
+
+The whole thing is a single-file binary, roughly 60MB compiled (Bun bundles its runtime). Nothing to install, no API key to provision, and no config file to write. Just:
+
+```bash
+bun build --compile ./src/index.ts --outfile worklog
+```
+
+or
+
+```bash
+bun run build
+```
+
+And then `worklog 2026-04-01` whenever I need it.
+
+## What I'd change
+
+A few things I'd do differently if starting over:
+
+- Cache the GitHub response, not just the summary. Right now, "regenerate" re-fetches GitHub. If the activity hasn't changed since the cached summary, that's wasted. A two-layer cache (raw → summary) would let me regenerate cheaply when I just want a different framing.
+- Bigger date ranges. The tool is hard-coded to one day. Useful for standups, useless for sprint reviews. Generalizing to a range is mostly a transform-layer change.
+- Less Haiku, more Sonnet. Haiku is fast and cheap, but Sonnet follows the format template more reliably. For something I'm pasting into Slack, I'd rather pay the latency.
+
+But none of those are blocking me from using it daily, which is the bar I care about for a personal tool.
+
+---
+Source: [worklog repo](https://github.com/chornonoh-vova/worklog)
+
