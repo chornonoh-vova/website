@@ -14,9 +14,8 @@ Of course, I can draw the maze myself, but where's the fun in that? For the game
 to be interesting, maze needs to be generated dynamically. So I started investigating
 exactly that.
 
-Turns out, it's kind of a rabbit hole, and there exists multiple approaches to solving
-this problem algorithmically. Let's take a look into the most common approaches
-and build these algorithms step-by-step.
+Turns out, it's kind of a rabbit hole, with multiple approaches to solving
+this problem algorithmically.
 
 ## Prerequisites
 
@@ -163,7 +162,7 @@ And, here's a visualization for it, where you can click "Generate" button multip
 times, and, because algorithm is random, new distinct maze will be generated every
 time!
 
-<MazeVisualization initialAlgo="randomized-dfs" client:load />
+<MazeVisualization initialAlgo="randomized-dfs" client:visible />
 
 ## Randomized Kruskal's algorithm
 
@@ -280,7 +279,7 @@ so easy to implement!
 
 Here's a visualization for this algorithm as well:
 
-<MazeVisualization initialAlgo="randomized-kruskals" client:load />
+<MazeVisualization initialAlgo="randomized-kruskals" client:visible />
 
 ## Wilson's algorithm
 
@@ -382,7 +381,7 @@ function generateMazeWilsons(width: number, height: number): Maze {
 
 And here's a visualization of this algorithm:
 
-<MazeVisualization initialAlgo="wilsons" client:load />
+<MazeVisualization initialAlgo="wilsons" client:visible />
 
 ## Conclusion
 

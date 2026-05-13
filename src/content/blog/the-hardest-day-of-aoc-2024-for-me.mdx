@@ -11,7 +11,7 @@ import { LANGraph } from "../../components/LANGraph.tsx";
 
 Last year, I participated in the [Advent of Code](https://adventofcode.com). This is a collection of Christmas-themed programming puzzles. They are published every day from December 1st to December 25th. There is also a leader board available, but I did not aim for the record-breaking times. For some of the days, just completing them was a challenge as well!
 
-I even decided to give myself an extra challenge: I've decided to solve those puzzles in [Rust](https://www.rust-lang.org/). I really liked this language during my time learning it for a work-related project, and I tried applying it to solving these puzzles. And honestly, I learned even more about the language. I received a great deal of practical skills, earned experience with built-in data structures in the standard library, and learned some of the best practices along the way.
+I even decided to give myself an extra challenge: I've decided to solve those puzzles in [Rust](https://www.rust-lang.org/). I really liked this language during my time learning it for a work-related project, and I tried applying it to solving these puzzles. And honestly, I learned more Rust doing those puzzles than I had in any structured setting.
 
 Some of the days were easier, and some days were harder, but one day really stood out for me: it's day 23.
 
@@ -39,7 +39,7 @@ This step is not particularly interesting. But it uses a couple of the rust feat
 
 Here is how we can view the graph that computers will form:
 
-<LANGraph mode="neighbors" client:load />
+<LANGraph mode="neighbors" client:visible />
 
 On desktop, you can hover over the vertices of the graph, and neighbors will be highlighted. On mobile, just click on the vertex that you want to highlight.
 
@@ -84,7 +84,7 @@ This code actually finds all sets of three inter-connected computers 3 times, th
 
 Here's what the graph looks like on the example data:
 
-<LANGraph mode="3-clique" client:load />
+<LANGraph mode="3-clique" client:visible />
 
 You can hover over the graph vertices to see the other two interconnected computers. You can also observe that one computer might be a part of multiple sets.
 
@@ -181,7 +181,7 @@ fn lan_party_password(input: &str) -> String {
 
 And that's how these cliques look like on the example data:
 
-<LANGraph mode="max-clique" client:load />
+<LANGraph mode="max-clique" client:visible />
 
 Now, when you hover over the vertex in a graph, the maximum clique that contains this vertex will be highlighted. If the hovered over vertex was part of multiple same-size cliques, only one will be highlighted.
 

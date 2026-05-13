@@ -10,7 +10,7 @@ import { Day4 } from "../../components/aoc-2025/Day4";
 Welcome to Advent of Code 2025 🎉
 
 On this page I will be documenting my struggles, solutions and, sometimes visualizations
-for days of this challenge. Let's begin!
+for days of this challenge.
 
 ## Boilerplate
 
@@ -139,7 +139,7 @@ implement, after seeing some inspiring visuals on Reddit.
 
 Here it is:
 
-<Day1 client:load />
+<Day1 client:visible />
 
 You can click "Simulate" to start an animation and "Reset" to start over.
 
@@ -390,7 +390,7 @@ console.log("part 2", countRemovableRolls(initialGrid));
 
 The second part reuses both functions from part 1. And I built a little interactive playground below:
 
-<Day4 client:load />
+<Day4 client:visible />
 
 In this playground, accessible rolls are marked with red color. Every time when you click "Remove" button, they will be removed, and the count of removed rolls will be increased by that amount. Count of accessible rolls will be recalculated. And, once you no longer have accessible rolls, "Remove" button will be disabled. But you can click "Reset" button to start over.
 

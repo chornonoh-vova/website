@@ -22,11 +22,16 @@
 @font-face {
   font-family: "Excalifont";
   src: url("/Excalifont-Regular.woff2") format("woff2");
+  font-display: swap;
 }
 
 html,
 body {
   @apply size-full;
+}
+
+html {
+  scroll-padding-top: 4rem;
 }
 
 body {
@@ -36,24 +41,32 @@ body {
 }
 
 .astro-code {
-  @apply border border-neutral-200;
+  @apply overflow-x-auto rounded-md border border-neutral-200 p-4;
 }
 
 .katex-html {
   @apply sr-only;
 }
 
-@media (prefers-color-scheme: dark) {
-  .astro-code {
-    @apply border-neutral-700;
-  }
+:where(.dark) .astro-code {
+  @apply border-neutral-700;
+}
 
-  .astro-code,
-  .astro-code span {
-    color: var(--shiki-dark) !important;
-    background-color: var(--shiki-dark-bg) !important;
-    font-style: var(--shiki-dark-font-style) !important;
-    font-weight: var(--shiki-dark-font-weight) !important;
-    text-decoration: var(--shiki-dark-text-decoration) !important;
+:where(.dark) .astro-code,
+:where(.dark) .astro-code span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -1,6 +1,6 @@
 ---
 import type { GetStaticPaths } from "astro";
-import { render } from "astro:content";
+import { render, type CollectionEntry } from "astro:content";
 import { allBlogPosts, getReadingTime } from "../../lib/posts";
 import Prose from "../../components/Prose.astro";
 import Layout from "../../layouts/Layout.astro";
@@ -8,28 +8,44 @@ import ExternalLink from "../../components/ExternalLink.astro";
 import FormattedDate from "../../components/FormattedDate.astro";
 import PostComments from "../../components/PostComments.astro";
 import NewsletterSubscribe from "../../components/NewsletterSubscribe.astro";
+import Link from "../../components/Link.astro";
 
 export const getStaticPaths = (async () => {
   const allPosts = await allBlogPosts();
 
-  return allPosts.map((post) => ({
+  return allPosts.map((post, index) => ({
     params: { slug: post.id },
-    props: post,
+    props: {
+      ...post,
+      prevPost: allPosts[index + 1] ?? null,
+      nextPost: allPosts[index - 1] ?? null,
+    },
   }));
 }) satisfies GetStaticPaths;
 
-const post = Astro.props;
+const { prevPost, nextPost, ...post } =
+  Astro.props as CollectionEntry<"blog"> & {
+    prevPost: CollectionEntry<"blog"> | null;
+    nextPost: CollectionEntry<"blog"> | null;
+  };
 
 const readingTime = getReadingTime(post.body);
+const ogImage = new URL(`/og/${post.id}.png`, Astro.site).toString();
 
 const { Content, ...components } = await render(post);
 ---
 
-<Layout title={post.data.title} description={post.data.description}>
+<Layout
+  title={post.data.title}
+  description={post.data.description}
+  ogImage={ogImage}
+>
   <Prose as="article">
     <h1 transition:name={`${post.id}-title`}>{post.data.title}</h1>
 
-    <div class="items-center justify-between md:flex">
+    <div
+      class="flex flex-col gap-1 md:flex-row md:items-center md:justify-between"
+    >
       <p transition:name={`${post.id}-description`}>{post.data.description}</p>
 
       <div class="flex items-center gap-1">
@@ -50,6 +66,37 @@ const { Content, ...components } = await render(post);
     <Content components={{ ...components, a: ExternalLink }} />
 
     <NewsletterSubscribe />
+
+    {
+      (prevPost || nextPost) && (
+        <nav
+          class="not-prose flex flex-col gap-2 border-t border-b border-neutral-200 py-6 sm:flex-row sm:justify-between dark:border-neutral-700"
+          aria-label="Post navigation"
+        >
+          {prevPost && (
+            <Link
+              href={`/blog/${prevPost.id}`}
+              underline
+              class="flex flex-col gap-0.5"
+            >
+              <span class="text-xs opacity-60">← Older post</span>
+              <span>{prevPost.data.title}</span>
+            </Link>
+          )}
+          {nextPost && (
+            <Link
+              href={`/blog/${nextPost.id}`}
+              underline
+              class="flex flex-col gap-0.5 sm:items-end"
+            >
+              <span class="text-xs opacity-60">Newer post →</span>
+              <span>{nextPost.data.title}</span>
+            </Link>
+          )}
+        </nav>
+      )
+    }
+
     <h3>Comments</h3>
     <PostComments />
   </Prose>

@@ -9,7 +9,7 @@ import WarehouseContainerUp from "../../assets/images/warehouse-container-up.svg
 
 > This post is a part 2 of the miniseries. Read part 1 [here](/blog/warehouse-simulator-part-1).
 
-In this post, I'll continue building this mini warehouse simulator, by first implementing parsing of part 2 of the original puzzle. Then we'll work on updating the movement logic to support new container entities. Finally, we'll see how this mini simulator can be deployed to GitHub pages. And, as a bonus, we'll update the movement logic, so that warehouse can have both boxes and containers, and they can interact with each other correctly.
+Part 2 introduces wide containers — two-cell entities rather than single boxes — which means the movement logic gets significantly more complex.
 
 ## Puzzle, part 2
 
@@ -61,7 +61,7 @@ export class Warehouse {
 
 This time, I've used JS Map instead of Set, and you'll see why later, when I'll be implementing movements.
 
-Let's now update the parsing:
+Updated parsing:
 
 ```typescript
 export class Warehouse {
@@ -112,8 +112,6 @@ export function drawContainer(
 }
 ```
 
-Let's now move on to implementing movement logic.
-
 ## Movement logic
 
 Updates to the bulldozer logic are pretty simple: we just take a look at which container might be affected (by looking up either left or right part), and try to move affected container.
@@ -156,7 +154,7 @@ Here are all of the possible configurations of the containers that we need to ac
 
 <WarehouseContainerUp class="mx-auto max-w-[700px]" />
 
-For moving down, though, cases are the same, just mirrored horizontally. All of those configurations might look like a lot, but we can greatly simplify our code to handle them all. First of all, I'm not handling up and down separately, but together. Let's take a look at how it all comes together in two methods: `canMoveContainer` and `moveContainer`.
+For moving down, though, cases are the same, just mirrored horizontally. All of those configurations might look like a lot, but we can greatly simplify our code to handle them all. I'm not handling up and down separately, but together. Here's how it comes together in two methods: `canMoveContainer` and `moveContainer`.
 
 ```typescript
 export class Warehouse {

@@ -6,15 +6,16 @@ import Header from "../components/Header.astro";
 type Props = {
   title: string;
   description: string;
+  ogImage?: string;
 };
 
-const { title, description } = Astro.props;
+const { title, description, ogImage } = Astro.props;
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
-    <Head title={title} description={description} />
+    <Head title={title} description={description} ogImage={ogImage} />
 
     <style is:inline>
       body {
@@ -36,7 +37,7 @@ const { title, description } = Astro.props;
   <body>
     <a
       href="#main-content"
-      class="fixed top-0 left-0 z-50 -translate-y-full transform bg-blue-600 px-4 py-2 text-white focus-visible:translate-y-0 focus-visible:outline focus-visible:outline-offset-2 motion-safe:transition"
+      class="fixed top-0 left-0 z-50 -translate-y-full transform bg-indigo-500 px-4 py-2 text-white focus-visible:translate-y-0 focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 focus-visible:outline-none motion-safe:transition"
     >
       Skip to main content
     </a>

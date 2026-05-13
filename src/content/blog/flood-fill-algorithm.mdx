@@ -14,7 +14,7 @@ import FloodFill4WayFinal from "../../assets/images/flood-fill-4-way-final.svg";
 import FloodFillDfsVisitOrder from "../../assets/images/flood-fill-dfs-visit-order.svg";
 import FloodFillBfsVisitOrder from "../../assets/images/flood-fill-bfs-visit-order.svg";
 
-Flood fill is the algorithm behind the "paint bucket" tool in MS Paint, Inkscape, and many other image editing software. The principle behind it, surprisingly, can be applied in a game such as Minesweeper (like revealing empty adjacent squares after clicking a blank tile). It can also be used in image processing to identify regions of the image with the same features. Let's explore how this algorithm works, look at the process step-by-step, and implement it!
+Flood fill is the algorithm behind the "paint bucket" tool in MS Paint, Inkscape, and many other image editing software. The principle behind it, surprisingly, can be applied in a game such as Minesweeper (like revealing empty adjacent squares after clicking a blank tile). It can also be used in image processing to identify regions of the image with the same features.
 
 ## How it works
 
@@ -36,8 +36,6 @@ This image has 4 rows and 6 columns, and in memory it will be represented by the
   [3, 3, 0, 0, 0, 4]
 ]
 ```
-
-Let's now go through algorithm step-by-step.
 
 ### Starting point
 
@@ -67,7 +65,7 @@ Here's an example of resulting image with 4-way expansion:
 
 <FloodFill4WayFinal class="mx-auto max-w-[357px]" />
 
-There are a couple of choices we can make when implementing this algorithm. We already discussed one of them (when talking about neighbors). The second choice we can make is _how_ we'll iterate over all of the pixels, that satisfy a given criteria: with DFS (depth-first search) or BFS (breadth-first search). Let's explore both of them, how they work and implement them.
+There are a couple of choices we can make when implementing this algorithm. We already discussed one of them (when talking about neighbors). The second choice we can make is _how_ we'll iterate over all of the pixels, that satisfy a given criteria: with DFS (depth-first search) or BFS (breadth-first search).
 
 But before we start, let's define a type and constant that will be used in both implementations:
 
@@ -169,7 +167,7 @@ This code is essentially doing the same, it visits all of the neighbors, but in 
 
 Here is an interactive playground with the 10x10 image:
 
-<FloodFillVisualization variant="dfs" client:load />
+<FloodFillVisualization variant="dfs" client:visible />
 
 In this playground, you can select a fill color, click on a pixel, and observe in real-time how DFS performs a flood fill! You can also reset the image back to its initial state by pressing the "Reset" button.
 
@@ -250,7 +248,7 @@ In the BFS approach we visit all of the children iteratively, and that can be a 
 
 Here's an interactive playground with 10x10 image:
 
-<FloodFillVisualization variant="bfs" client:load />
+<FloodFillVisualization variant="bfs" client:visible />
 
 In this playground, you can select a fill color, click on a pixel, and observe in real-time how BFS performs a flood fill, and compare it with DFS that you saw previously. You can also reset the image back to its initial state by pressing the "Reset" button, just as in example from before.
 

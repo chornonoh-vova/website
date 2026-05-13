@@ -8,23 +8,26 @@ import { SITE_TITLE } from "../constants";
 interface Props {
   title: string;
   description: string;
+  ogImage?: string;
 }
 
-const { title, description } = Astro.props;
+const { title, description, ogImage } = Astro.props;
 
 const pageTitle = `${title} | ${SITE_TITLE}`;
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const ogImageUrl = ogImage ?? new URL("/og-default.png", Astro.site).toString();
 ---
 
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="alternate icon" type="image/png" href="/favicon.png" />
-<meta name="viewport" content="width=device-width" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="generator" content={Astro.generator} />
 <link rel="manifest" href="/manifest.json" />
 
 <!-- Canonical URL -->
-<link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+<link rel="canonical" href={canonicalUrl} />
 
 <!-- Site map -->
 <link rel="sitemap" href="/sitemap-index.xml" />
@@ -41,6 +44,22 @@ const pageTitle = `${title} | ${SITE_TITLE}`;
 <title>{pageTitle}</title>
 <meta name="title" content={pageTitle} />
 <meta name="description" content={description} />
+
+<!-- Open Graph -->
+<meta property="og:type" content={ogImage ? "article" : "website"} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:site_name" content={SITE_TITLE} />
+<meta property="og:title" content={pageTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={ogImageUrl} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={pageTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImageUrl} />
 
 <!-- Analytics -->
 <Analytics />

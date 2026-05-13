@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/Button";
 import { PlaySquare, RefreshCw } from "lucide-react";
 
@@ -85,7 +85,7 @@ export function Day1() {
   const [instruction, setInstruction] = useState("");
   const [data, setData] = useState<[string, number, number, number][]>([]);
 
-  const safe = useMemo(() => new Safe(), []);
+  const safeRef = useRef(new Safe());
 
   const anglePerTick = 360 / TICK_COUNT;
   const dialAngle = dial * anglePerTick;
@@ -99,16 +99,16 @@ export function Day1() {
   };
 
   const simulate = () => {
-    safe.dial = DIAL_DEFAULT;
-    safe.part1 = 0;
-    safe.part2 = 0;
+    safeRef.current.dial = DIAL_DEFAULT;
+    safeRef.current.part1 = 0;
+    safeRef.current.part2 = 0;
 
     const gen: [string, number, number, number][] = [];
     for (const instruction of instructions) {
       const direction = instruction.substring(0, 1) as Direction;
       const amount = parseInt(instruction.substring(1));
 
-      safe.turn(direction, amount, (dial, part1, part2) => {
+      safeRef.current.turn(direction, amount, (dial, part1, part2) => {
         gen.push([instruction, dial, part1, part2]);
       });
     }
@@ -116,20 +116,23 @@ export function Day1() {
     setData(gen);
   };
 
+  const dialsIdxRef = useRef(0);
+
   useEffect(() => {
-    let dialsIdx = 0;
+    dialsIdxRef.current = 0;
     const intervalId = setInterval(() => {
-      if (dialsIdx === data.length) {
+      if (dialsIdxRef.current === data.length) {
         clearInterval(intervalId);
         return;
       }
 
-      const [currInstruction, currDial, currPart1, currPart2] = data[dialsIdx];
+      const [currInstruction, currDial, currPart1, currPart2] =
+        data[dialsIdxRef.current];
       setInstruction(currInstruction);
       setDial(currDial);
       setPart1(currPart1);
       setPart2(currPart2);
-      dialsIdx++;
+      dialsIdxRef.current++;
     }, 100);
 
     return () => {

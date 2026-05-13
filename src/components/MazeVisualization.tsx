@@ -261,7 +261,7 @@ export function MazeVisualization({ initialAlgo }: { initialAlgo: string }) {
   const [maze, setMaze] = useState<Maze | null>(null);
   const [algo, setAlgo] = useState(initialAlgo);
 
-  const drawMaze = () => {
+  const drawMaze = useCallback(() => {
     if (!maze) return;
 
     const dark =
@@ -303,7 +303,7 @@ export function MazeVisualization({ initialAlgo }: { initialAlgo: string }) {
       offsetX + (maze[0].length - 1) * TILE_SIZE,
       offsetY + (maze.length - 2) * TILE_SIZE,
     );
-  };
+  }, [maze]);
 
   const generate = useCallback(() => {
     const canvas = canvasRef.current!;
@@ -348,7 +348,7 @@ export function MazeVisualization({ initialAlgo }: { initialAlgo: string }) {
     ctx.scale(scale, scale);
   }, []);
 
-  useEffect(drawMaze, [maze]);
+  useEffect(drawMaze, [drawMaze]);
 
   useEffect(() => {
     const listener = () => {

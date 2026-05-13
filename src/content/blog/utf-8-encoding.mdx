@@ -38,13 +38,11 @@ Here are a couple of example characters and how they'll be encoded in UTF-8:
 - Character "დ" (U+10D3) is encoded in three bytes as `0xe18393`
 - Emoji "😂" (U+1F602) is encoded in four bytes as `0xf09f9882`
 
-Let's now build a visualization of the UTF-8.
-
 ## Visualization
 
 And we should actually start with an interesting fact: JavaScript (just like Java) uses UTF-16 to encode strings in runtime. This was a bit of surprise to me. I always thought that JS uses UTF-8. There are languages that use UTF-8 for string encoding, for example, Rust. So the task of visualizing UTF-8 encoding with JS actually comes down to converting UTF-16 to UTF-8. I will go down that rabbit hole in some future post, and try to implement it from scratch. But for now, let's concentrate on UTF-8, and to do that, we'll utilize this built-in API in JS: [TextEncoder](https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder).
 
-<UTF8Visualization client:load />
+<UTF8Visualization client:visible />
 
 Here's a core of what's powering this table:
 

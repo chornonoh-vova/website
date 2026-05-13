@@ -6,15 +6,22 @@ interface Props extends HTMLAttributes<"a"> {
   underline?: boolean;
 }
 
-const { underline, class: classNames, ...props } = Astro.props;
+const {
+  underline,
+  class: classNames,
+  "aria-current": ariaCurrent,
+  ...props
+} = Astro.props;
 ---
 
 <a
   class={clsx([
-    "decoration-black/15 dark:decoration-white/30 hover:decoration-black/25 hover:dark:decoration-white/50 text-current hover:text-black hover:dark:text-white",
+    "decoration-black/30 dark:decoration-white/40 hover:decoration-black/50 hover:dark:decoration-white/70 text-current hover:text-black hover:dark:text-white",
     { "underline underline-offset-2": underline },
+    { "font-medium": ariaCurrent === "page" },
     classNames,
   ])}
+  aria-current={ariaCurrent}
   {...props}
 >
   <slot />

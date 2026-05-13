@@ -1,0 +1,18 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Link from "../components/Link.astro";
+---
+
+<Layout
+  title="Page Not Found"
+  description="The page you're looking for doesn't exist."
+>
+  <div class="flex flex-col gap-4">
+    <h1 class="font-semibold">404 — Page Not Found</h1>
+    <p>The page you're looking for doesn't exist or has been moved.</p>
+    <div class="flex gap-4">
+      <Link href="/" underline>Go home</Link>
+      <Link href="/blog" underline>Browse the blog</Link>
+    </div>
+  </div>
+</Layout>

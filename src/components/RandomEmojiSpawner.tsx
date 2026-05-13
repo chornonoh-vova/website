@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "./ui/Button";
 import { BrushCleaning } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 const EMOJIS = [
   "⚡️",
@@ -38,6 +38,7 @@ type Emoji = {
 export function RandomEmojiSpawner() {
   const [inert, setInert] = useState(true);
   const [emojis, setEmojis] = useState<Emoji[]>([]);
+  const reducedMotion = useReducedMotion();
 
   let addLabel = "Add some emojis!";
 
@@ -84,10 +85,12 @@ export function RandomEmojiSpawner() {
               key={id}
               className="absolute origin-center -translate-1/2 leading-none"
               style={{ top, left }}
-              transition={{ type: "spring", bounce: 0.5 }}
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0 }}
+              transition={
+                reducedMotion ? undefined : { type: "spring", bounce: 0.5 }
+              }
+              initial={reducedMotion ? false : { opacity: 0, scale: 0 }}
+              animate={reducedMotion ? undefined : { opacity: 1, scale: 1 }}
+              exit={reducedMotion ? undefined : { opacity: 0, scale: 0 }}
             >
               {emoji}
             </motion.span>
@@ -111,7 +114,7 @@ export function RandomEmojiSpawner() {
           <Button className="grow" onClick={spawn}>
             {addLabel}
           </Button>
-          <Button title="Clear" onClick={clear}>
+          <Button aria-label="Clear emojis" onClick={clear}>
             <BrushCleaning className="size-3.5" />
           </Button>
         </div>

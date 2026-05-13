@@ -36,7 +36,7 @@ Let’s now look at how the LRU cache works under the hood. In this section, you
 Try to enter 3 into the "Key to get" field below, and clicking "Get" button. Observe how entry with key = 3 moves to the top, as it becomes most recently used. Also note, that number of hits increases in the cache stats. Now, try entering other keys, that are available in the cache, and observing how the state of the cache changes with every request.
 
 <LRUVisualization
-  client:load
+  client:visible
   initial={[
     ["1", "apple 🍎"],
     ["2", "banana 🍌"],
@@ -57,7 +57,7 @@ Try to enter 3 into the "Key to get" field below, and clicking "Get" button. Obs
 Now, try to enter the key that doesn't exist in the cache, for example, 6. You can observe cache miss being logged and number of misses increasing. Most importantly, though, cache state shouldn't have changed at all.
 
 <LRUVisualization
-  client:load
+  client:visible
   initial={[
     ["1", "apple 🍎"],
     ["2", "banana 🍌"],
@@ -74,7 +74,7 @@ Now, try to enter the key that doesn't exist in the cache, for example, 6. You c
 Now, try adding a new entry into the cache, for example with key **6** and value **lemon 🍋**. And this item will be added no problem. But try to add one more item, for example, **7**: **cherries 🍒**. You can observe how the least recent entry (apple) gets evicted from the cache, to make space for the new items (because in this visualization maximum capacity is 6).
 
 <LRUVisualization
-  client:load
+  client:visible
   initial={[
     ["1", "apple 🍎"],
     ["2", "banana 🍌"],
@@ -92,7 +92,7 @@ Now, try adding a new entry into the cache, for example with key **6** and value
 Here is a full interactive playground, with an additional buttons to remove entries from the cache.
 
 <LRUVisualization
-  client:load
+  client:visible
   initial={[
     ["1", "apple 🍎"],
     ["2", "banana 🍌"],

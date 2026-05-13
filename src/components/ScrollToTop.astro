@@ -34,7 +34,9 @@ import Arrow from "../assets/icons/arrow.svg";
   scrollToTop?.addEventListener("click", () => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
     });
   });
 </script>

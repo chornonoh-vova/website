@@ -11,8 +11,6 @@ In this week blog post, I decided to continue the Sudoku topic from a previous w
 
 But this time I decided to tackle a harder problem: how to actually solve a Sudoku. Here's a LeetCode question that inspired me to write this blog post as well: [37. Sudoku Solver](https://leetcode.com/problems/sudoku-solver/description/)
 
-Let's take a look at how we can solve this problem step by step.
-
 ## Backtracking
 
 The main idea behind a solution is [backtracking](https://en.wikipedia.org/wiki/Backtracking). We'll iterate over all of the empty cells on the board. For every such cell we can choose a number from 1 to 9. But, when choosing number for one cell, it limits numbers that we can choose for the next cell in the same row, column, and box. After choosing, we can proceed to the next empty cell and see if it satisfies all of the constraints (remember that we need to ensure that every row, column and box contain numbers from 1 to 9 without repetition). If we cannot satisfy our constraints, revert our choice and try the next number. When we successfully filled the last empty cell - that means we've solved a Sudoku!
@@ -80,7 +78,7 @@ class SudokuState {
 
 Here, I've encapsulated box index calculation, and the arrays that store the state itself, and in my opinion, it turned out to be pretty nice interface. If you're wondering what all of these hashes are, I've also written a [blog post](/blog/typescript-vs-javascript-private) about it 😉
 
-Let's now connect all the dots, and implement algorithm itself:
+Here's how the algorithm comes together:
 
 ```typescript
 const EMPTY = ".";
@@ -136,7 +134,7 @@ To better understand how this backtracking works, I've decided to build visualiz
 
 Here it is:
 
-<SudokuSolverVisualization client:load />
+<SudokuSolverVisualization client:visible />
 
 In this visualization, there are 3 buttons available:
 
