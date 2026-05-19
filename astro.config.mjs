@@ -9,6 +9,7 @@ import react from "@astrojs/react";
 
 export default defineConfig({
   site: "https://chornonoh-vova.com",
+  trailingSlash: "always",
   prefetch: true,
 
   vite: {
