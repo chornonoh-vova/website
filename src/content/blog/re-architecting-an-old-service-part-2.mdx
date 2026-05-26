@@ -1,0 +1,252 @@
+---
+title: "Re-architecting an old service: Part 2"
+description: "How I structured a multi-PR migration for AI delegation, and what actually made it work"
+date: 2026-05-26
+draft: true
+---
+
+> This post is a part 2 of the miniseries. Read part 1 [here](/blog/re-architecting-an-old-service-part-1).
+
+Porting [BrowserUp Proxy](https://github.com/browserup/browserup-proxy)'s feature set to [mitmproxy](https://github.com/mitmproxy/mitmproxy) meant porting more than a dozen distinct behaviors. Header injection. Basic and NTLM authentication. PDF handling. Cookie management. Content filtering. Debug capture. Each had edge cases, tests, and a reference implementation in Java on one side, with new Python addons needed on the other. Done serially, this was many weeks of work.
+
+I used Claude Code to implement most of the feature ports in parallel, and it worked. Not because of anything special about the AI. It worked because I put real time into the structure before writing any code. Get the structure wrong and the AI produces code that looks plausible, compiles, and does the wrong thing. Get it right and you get implementations you can actually ship.
+
+## Designing for delegation
+
+AI agents do well on tasks that are self-contained and precisely scoped, with a runnable definition of done. They struggle with judgment calls: things no spec captures, decisions that constrain everything else. So the planning question I kept coming back to was: which pieces can I describe precisely enough that an agent can implement them without me answering follow-up questions?
+
+The answer shaped the PR structure. A single foundation PR established the shared infrastructure: the interface, the factory, the controller, the session config schema, the addon loading pattern. That one had to land first, because every subsequent PR depended on the pattern it established. After it merged, roughly a dozen feature PRs could run in any order. Each one touched a single Python addon file, its own fields in the shared config record, and its own tests. No feature PR overlapped with any other feature PR's addon.
+
+
+```txt
+              ┌──────────────────────────────────────┐
+              │           Foundation PR               │
+              │  interface · factory · controller     │
+              │  session config schema · addon loader │
+              └──────────────────┬───────────────────┘
+                                 │
+        ┌──────────┬─────────────┼─────────────┬──────────┐
+        │          │             │             │          │
+        ▼          ▼             ▼             ▼          ▼
+  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+  │ Feature  │ │ Feature  │ │ Feature  │ │ Feature  │ │   ...    │
+  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
+                                                       ┌──────────┐
+                                                       │  Deploy  │
+                                                       └──────────┘
+```
+
+The foundation PR is where I spent the most upfront effort. Everything downstream is parallel, but only if the foundation is clear enough to follow consistently. I wrote it myself, documented the pattern explicitly, and treated it as something an agent could use as a reference. If it had been ambiguous, every feature PR would have inherited that ambiguity.
+
+## Three things that made it work
+
+### Written specs per feature
+
+Before handing off any feature PR, I wrote a short brief: what the addon does, which fields it reads from the session config, what the edge cases are, what the original Java filter does in each branch with notes on where mitmdump's behavior differs. Not a design doc. Just enough that the target was unambiguous. Vague specs produced drifting implementations that needed correction. Precise specs produced first passes I could iterate from directly.
+
+Basic authentication is a good example. The Java filter from BrowserUp hooks into LittleProxy's Netty pipeline via `clientToProxyRequest`:
+
+```java
+@Override
+public HttpResponse clientToProxyRequest(HttpObject httpObject) {
+    if (!(httpObject instanceof HttpRequest req)) return null;
+    String host = req.headers().get(HttpHeaderNames.HOST, "");
+    if (!hostPattern.matcher(host).find()) return null;
+    String encoded = Base64.getEncoder()
+        .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+    req.headers().set(HttpHeaderNames.AUTHORIZATION, "Basic " + encoded);
+    return null;
+}
+```
+
+The spec for the mitmproxy port translated that logic directly: on each request, check the host against the configured pattern, inject the header if it matches. The addon that came back:
+
+```python
+import base64
+import re
+from mitmproxy import http
+from config import SessionConfig
+
+
+class BasicAuthAddon:
+    def __init__(self):
+        self.config: SessionConfig | None = None
+        self._encoded: str | None = None
+
+    def configure(self, updated):
+        self.config = SessionConfig.load()
+        if self.config.basic_auth:
+            auth = self.config.basic_auth
+            self._encoded = base64.b64encode(
+                f"{auth.username}:{auth.password}".encode()
+            ).decode()
+        else:
+            self._encoded = None
+
+    def request(self, flow: http.HTTPFlow) -> None:
+        if not self._encoded:
+            return
+        if self.config.basic_auth.host_pattern and not re.search(
+            self.config.basic_auth.host_pattern, flow.request.pretty_host
+        ):
+            return
+        flow.request.headers["Authorization"] = f"Basic {self._encoded}"
+
+
+addons = [BasicAuthAddon()]
+```
+
+Different language, different framework, different hook model. The Java filter is called per-request by LittleProxy's Netty pipeline; the Python addon hooks into mitmproxy's event system. But the behavior maps directly. Including the Java source in the spec let the AI cross-reference both sides without me having to narrate every branch. In practice it caught more than the happy path: the Java filter had a subtle case in the host comparison that the spec called out, and the Python port handled it the same way.
+
+### Unit tests as acceptance criteria
+
+Each feature PR had tests, and those tests were the runnable definition of done. The AI could run them, read specific failure output, and adjust against that rather than against my prose description of what was wrong. This removed a slow feedback loop.
+
+The tests for each addon were short. For basic auth:
+
+```python
+import base64
+from unittest.mock import MagicMock
+from mitmproxy.test import tflow, tutils
+from addons.basic_auth import BasicAuthAddon
+
+
+def _make_flow(host: str):
+    return tflow.tflow(req=tutils.treq(host=host))
+
+
+def _make_config(username="user", password="pass", host_pattern=None):
+    cfg = MagicMock()
+    cfg.basic_auth = MagicMock(username=username, password=password, host_pattern=host_pattern)
+    return cfg
+
+# In a real project _make_flow and _make_config live in conftest.py,
+# where pytest picks them up automatically across all addon test files.
+
+
+def test_injects_header():
+    addon = BasicAuthAddon()
+    addon.config = _make_config("alice", "s3cr3t")
+    addon._encoded = base64.b64encode(b"alice:s3cr3t").decode()
+    flow = _make_flow("example.com")
+    addon.request(flow)
+    assert flow.request.headers["Authorization"] == f"Basic {addon._encoded}"
+
+
+def test_skips_non_matching_host():
+    addon = BasicAuthAddon()
+    addon.config = _make_config(host_pattern=r"api\.example\.com")
+    addon._encoded = base64.b64encode(b"user:pass").decode()
+    flow = _make_flow("other.com")
+    addon.request(flow)
+    assert "Authorization" not in flow.request.headers
+
+
+def test_no_op_without_auth_config():
+    addon = BasicAuthAddon()
+    flow = _make_flow("example.com")
+    addon.request(flow)
+    assert "Authorization" not in flow.request.headers
+```
+
+Making these runnable from `./gradlew test` meant wiring pytest into Gradle. The setup is verbose, but each piece has a reason.
+
+Path declarations first, so every task knows where to find things:
+
+```gradle
+def pythonSrcDir = file("$projectDir/src/main/python")
+def pythonTestDir = file("$projectDir/src/test/python")
+def pythonBuildDir = layout.buildDirectory.dir("python")
+def pythonRequirements = file("$projectDir/src/main/python/requirements.txt")
+def venvDir = layout.buildDirectory.dir("python-venv")
+def venvPython = venvDir.map { it.file(org.gradle.internal.os.OperatingSystem.current().windows
+        ? 'Scripts/python.exe' : 'bin/python').asFile }
+```
+
+`venvPython` resolves to the right interpreter path on both Windows and Unix — a small thing, but it's what keeps the build from failing on developers' machines.
+
+`packagePython` copies the addons into the build output so the rest of the packaging pipeline can find them:
+
+```gradle
+tasks.register('packagePython', Copy) {
+    group = 'build'
+    description = 'Copies Python addons and requirements into build output for deployment.'
+    from(pythonSrcDir)
+    into(pythonBuildDir)
+}
+
+assemble.dependsOn('packagePython')
+```
+
+Venv creation and requirement installation are two separate tasks so Gradle's up-to-date checks work correctly. `pythonVenvCreate` is skipped by Gradle's incremental build when its declared output — the Python interpreter — already exists. `pythonInstallRequirements` re-runs only when `requirements.txt` changes, tracked via a stamp file:
+
+```gradle
+tasks.register('pythonVenvCreate', Exec) {
+    group = 'build'
+    description = 'Creates a Python virtual environment under build/python-venv.'
+    def venv = venvDir.get().asFile
+    outputs.file(venvPython)
+    executable = 'python3'
+    args = ['-m', 'venv', venv.absolutePath]
+}
+
+tasks.register('pythonInstallRequirements', Exec) {
+    group = 'build'
+    description = 'Installs proxy Python requirements into the local venv.'
+    dependsOn('pythonVenvCreate')
+    inputs.file(pythonRequirements)
+    def stamp = layout.buildDirectory.file("python-venv/.requirements.stamp")
+    outputs.file(stamp)
+    executable = venvPython.get().absolutePath
+    args = ['-m', 'pip', 'install', '--disable-pip-version-check', '--quiet', '-r',
+            pythonRequirements.absolutePath]
+    doLast {
+        stamp.get().asFile.text = ""
+    }
+}
+```
+
+Finally, the test runner. `PYTHONPATH` is set so test files can import from the addons directory directly, without any `sys.path` manipulation inside the test files themselves:
+
+```gradle
+tasks.register('pythonTest', Exec) {
+    group = 'verification'
+    description = 'Runs pytest against proxy/src/test/python using the project venv.'
+    dependsOn('pythonInstallRequirements')
+    workingDir = projectDir
+    executable = venvPython.get().absolutePath
+    args = ['-m', 'pytest', pythonTestDir.absolutePath]
+    environment 'PYTHONPATH', "${pythonSrcDir}/addons"
+    onlyIf {
+        pythonTestDir.exists() && pythonTestDir.listFiles()?.any { it.name.endsWith('.py') }
+    }
+}
+
+tasks.named('test') {
+    dependsOn('pythonTest')
+}
+```
+
+Once this was in place, `./gradlew test` ran both Java and Python suites in a single pass. Pytest failures came back as specific assertion messages with exact line numbers and the expected vs. actual values — the same structure the AI was already used to from JUnit. That's the part that mattered. Several addons went through multiple rounds of iteration against real test failures before I ever looked at them.
+
+### End-to-end tests against a real QA site
+
+This one changed things more than I expected, and it was a later addition to the project. Earlier on, verifying a new addon meant running a scan by hand, watching the behavior, writing up what was wrong, and feeding that back. Slow, and it required me to be the feedback mechanism, which serialized work that was supposed to be parallel.
+
+Once we had E2E tests running against an actual site in a QA environment — real HTTP traffic, real TLS negotiation, real server responses — the AI could close that loop without me. Implement, run the suite, read the failures, adjust, run again. By the time I reviewed a PR, it had already gone through several iterations against real behavior. The output quality was noticeably better than what I was seeing before the E2E tests existed. Synthetic unit tests cover cases you thought of in advance. Real traffic surfaces the ones you didn't.
+
+## Where I still had to step in
+
+This didn't run on autopilot. Three categories kept pulling me back in.
+
+The subprocess boundary has quirks that are not in the documentation and that I couldn't have anticipated in a spec. The timing of HAR file writes relative to process shutdown. Edge cases in how mitmdump handles specific TLS configurations. Hook ordering in the Python addon system under certain flow types. When these surfaced in failures, I diagnosed them directly, then either wrote the fix or rewrote the relevant part of the spec precisely enough for the AI to implement it.
+
+Some behaviors had to match BrowserUp exactly because downstream consumers depended on specific output formats. Others were worth improving, because BrowserUp's behavior in certain cases was a workaround, not a feature. The AI could not make that call. I made it, updated the spec, and the AI implemented the decision.
+
+The session config record is shared across all feature PRs. A field added in one addon can interact with logic in another. The AI worked on PRs in isolation and didn't carry that context. I tracked the interactions and flagged them when they became relevant.
+
+## What I'd carry forward
+
+The structure of the work mattered far more than any specific capability of the tool. The foundation PR, the per-feature scoping, the written specs, the unit tests, the E2E tests against real traffic: those were the decisions that determined what came out. When the structure was clear, I got code I could ship. When it wasn't, I got code that looked right but needed rewriting.
+
+The work that benefited from delegation was the mechanical part: translating a precise behavioral spec into working code, covering each case in tests, iterating on failures until the suite passed. That's a large share of any implementation effort. The work that required judgment didn't go away: diagnosing subprocess quirks, deciding where to match old behavior versus improve on it, designing the foundation that everything depended on. It just got concentrated where it actually mattered.
