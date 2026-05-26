@@ -17,7 +17,7 @@ Its job is narrow: sit between the worker tier and the open internet, intercept 
 
 We replaced it with [mitmproxy](https://github.com/mitmproxy/mitmproxy), specifically `mitmdump`, the CLI that lets you drive mitmproxy from a script. Where BrowserUp ran inside the JVM, mitmdump runs as a spawned subprocess, one per session. That is a real architectural shift. The rest of the system does not know it happened.
 
-Previously, service was tightly coupled into the specific implementation details of the BrowserUp proxy, therefore, entire service needed the update. Here's how the result looks like now:
+The old service was tightly coupled to BrowserUp's internals throughout, so the whole thing needed reworking. Here's what it looks like now:
 
 <Figure caption="Proxy service architecture overview">
   <ProxyServiceArchitecture class="mx-auto" />
@@ -43,7 +43,7 @@ A `ProxyManagerFactory` creates the right implementation. A `ProxyManagementCont
   <ProxyManagerFactoryImpl class="mx-auto" />
 </Figure>
 
-Neat trick: there's a spring bean defined, that collects all factories available (`InternalProxyManagerFactory` and `MitmproxyManagerFactory` are beans itself):
+Spring handles the wiring automatically. A collector bean receives all `ProxyManagerFactory` implementations as a list (`InternalProxyManagerFactory` and `MitmproxyManagerFactory` are both beans themselves), then maps them by type:
 
 ```java
 @Bean
@@ -58,7 +58,7 @@ public Map<ProxyImplementation, ProxyManagerFactory> proxyManagerFactories(
 }
 ```
 
-Spring Boot collects all of the beans implementations of the interface `ProxyManagerFactory` into one list - and in this method they are transformed into a `Map`. Then, controller can create instances from a factory on-demand:
+Spring Boot collects all bean implementations of the `ProxyManagerFactory` interface into a list, and this method turns them into a map. The controller can then create instances on demand:
 
 ```java
 ProxyImplementation impl = request.getProxyImplementation();
