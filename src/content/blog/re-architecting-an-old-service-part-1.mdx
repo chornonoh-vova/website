@@ -1,0 +1,125 @@
+---
+title: "Re-architecting an old service: Part 1"
+description: "Replacing an aging Java proxy with a Python subprocess, without touching the callers"
+date: 2026-05-26
+---
+
+import Figure from "../../components/Figure.astro";
+
+import ProxyServiceArchitecture from "../../assets/images/proxy-service-architecture.svg";
+import ProxyManagerImpl from "../../assets/images/proxy-manager-impl.svg";
+import ProxyManagerFactoryImpl from "../../assets/images/proxy-manager-factory-impl.svg";
+import ProxyImplResolution from "../../assets/images/proxy-impl-resolution.svg";
+
+Every distributed system has a component that everyone quietly dreads touching. Ours was the proxy service.
+
+Its job is narrow: sit between the worker tier and the open internet, intercept and record HTTP traffic, and return a structured capture when a session ends. One microservice in a larger system, talked to by workers via a small REST API, configured by a config server, otherwise invisible. The problem was what it ran on. For years, the core was [BrowserUp Proxy](https://github.com/browserup/browserup-proxy), a Java library that embeds directly in the service's JVM. BrowserUp works. It just hasn't had a meaningful release in years. No security patches. No bug fixes. We had accumulated workarounds in our codebase for issues the upstream would never address, and every new capability we needed — new authentication types, reliable chunked encoding behavior, predictable certificate trust — meant writing more code on top of that unmaintained base.
+
+We replaced it with [mitmproxy](https://github.com/mitmproxy/mitmproxy), specifically `mitmdump`, the CLI that lets you drive mitmproxy from a script. Where BrowserUp ran inside the JVM, mitmdump runs as a spawned subprocess, one per session. That is a real architectural shift. The rest of the system does not know it happened.
+
+Previously, service was tightly coupled into the specific implementation details of the BrowserUp proxy, therefore, entire service needed the update. Here's how the result looks like now:
+
+<Figure caption="Proxy service architecture overview">
+  <ProxyServiceArchitecture class="mx-auto" />
+</Figure>
+
+The tempting path was to patch in-place: swap the library, keep the structure, minimal disruption. I decided against it. If I was going to touch this code anyway, I wanted to leave it in a state where the next replacement, whenever it came, would be hours rather than months. That meant introducing an abstraction.
+
+## The abstraction
+
+The only move that makes a replacement like this safe is to define an interface before writing any implementation. We have a `ProxyManager` interface with three methods: `beginRequest`, which initializes a session with the current configuration; `endRequest`, which stops recording and returns a `HarData` object; and `destroy`, which tears everything down.
+
+> Note: [HAR](<https://en.wikipedia.org/wiki/HAR_(file_format)>) is a special file format for recording web browser's interactions with the site in a structured JSON archive.
+
+<Figure caption="Proxy manager class diagram">
+  <ProxyManagerImpl class="mx-auto" />
+</Figure>
+
+`InternalProxyManager` wraps BrowserUp and handles everything in-process. `MitmproxyManager` manages a mitmdump subprocess. Nothing outside the proxy service touches either concrete class. Workers call the controller's endpoints, the controller calls the interface, and the interface is identical regardless of which implementation runs. That boundary is what let us run both implementations in parallel during the transition and compare their output for the same traffic.
+
+A `ProxyManagerFactory` creates the right implementation. A `ProxyManagementController` holds one `ProxyManager` per active port slot and maps the incoming HTTP calls to interface methods.
+
+<Figure caption="Proxy manager factory class diagram">
+  <ProxyManagerFactoryImpl class="mx-auto" />
+</Figure>
+
+Neat trick: there's a spring bean defined, that collects all factories available (`InternalProxyManagerFactory` and `MitmproxyManagerFactory` are beans itself):
+
+```java
+@Bean
+public Map<ProxyImplementation, ProxyManagerFactory> proxyManagerFactories(
+    List<ProxyManagerFactory> factories) {
+  return factories.stream().collect(
+      Collectors.toMap(
+          ProxyManagerFactory::getImplementation,
+          Function.identity()
+      )
+  );
+}
+```
+
+Spring Boot collects all of the beans implementations of the interface `ProxyManagerFactory` into one list - and in this method they are transformed into a `Map`. Then, controller can create instances from a factory on-demand:
+
+```java
+ProxyImplementation impl = request.getProxyImplementation();
+ProxyManagerFactory factory = proxyManagerFactories.get(impl);
+ProxyManager proxy = factory.create(port);
+```
+
+## Which implementation runs
+
+We needed control at three levels. A direct caller can specify an implementation for a single session. A job can set a preference that all its sessions inherit. If neither is set, the service falls back to a system-wide deployment property.
+
+<Figure caption="Proxy implementation resolution flowchart">
+  <ProxyImplResolution class="mx-auto" />
+</Figure>
+
+This is what made incremental rollout possible. We pointed specific jobs at mitmproxy, watched their captured output against BrowserUp's for the same URLs, found the discrepancies, and expanded. Flipping the system default is a one-line config change. Rolling it back is the same. No consumer code involved either way.
+
+## The subprocess boundary
+
+`MitmproxyManager` is where the implementation gets genuinely interesting, because `beginRequest` and `endRequest` are not just method calls. They are process lifecycle events.
+
+The new implementation delegates to a purpose-built external binary that runs as a separate process, one per session. That architectural boundary introduced a challenge I hadn't fully anticipated: how do you pass per-session configuration to a process you can't share memory with?
+
+At `beginRequest`: serialize the session configuration (headers to inject, authentication credentials, filter rules, the target URL) to a temporary JSON file, then spawn mitmdump with the file path passed as a command-line argument. mitmdump loads Python addons at startup. Each addon reads from that file through a shared singleton. One addon per feature, no shared mutable state between them.
+
+At `endRequest`: send SIGTERM, wait for mitmdump to flush its HAR file to disk, parse the HAR into a `HarData` object. At `destroy`: force-kill if still running, delete the temp files.
+
+```txt
+  Worker          Controller         MitmproxyManager       mitmdump
+    │                 │                     │                   │
+    │── POST ────────▶│                     │                   │
+    │                 │── allocate slot     │                   │
+    │                 │                     │                   │
+    │── PUT ─────────▶│                     │                   │
+    │                 │── beginRequest() ──▶│                   │
+    │                 │                     │── write JSON      │
+    │                 │                     │── spawn ─────────▶│
+    │                 │                     │                   │── read addons
+    │                 │                     │                   │── bind port
+    │                 │                     │                   │
+    │              (traffic flows through proxy)                │
+    │                 │                     │                   │
+    │── GET ─────────▶│                     │                   │
+    │                 │── endRequest() ────▶│                   │
+    │                 │                     │── SIGTERM ───────▶│
+    │                 │                     │◀── flush HAR ─────│
+    │                 │                     │── parse HAR       │
+    │◀── HarData ─────│◀── HarData ─────────│                   │
+    │                 │                     │                   │
+    │── DELETE ──────▶│                     │                   │
+    │                 │── destroy() ───────▶│── cleanup         │
+```
+
+Workers still send the same four HTTP calls they always sent. The subprocess complexity is entirely inside `MitmproxyManager`.
+
+## Migration safety
+
+The implementation field on a session configuration defaults to null, which the factory resolves to the system default. Every existing session kept using BrowserUp until we changed the deployment property. No backfill was needed. Nothing calling the proxy service required modification.
+
+BrowserUp is still in the codebase, still reachable via the override field. When we are ready to remove it, the change will be a deletion.
+
+---
+
+In the next post I'll describe how we broke the mitmproxy port into roughly a dozen independently mergeable pull requests and used Claude Code to implement most of them in parallel. Three things made that delegation work: precise written specs per feature, unit tests as runnable acceptance criteria, and end-to-end tests against a real QA site that let the AI iterate without me as the feedback loop.
