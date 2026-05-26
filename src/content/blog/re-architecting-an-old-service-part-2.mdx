@@ -1,0 +1,65 @@
+---
+title: "Re-architecting an old service: Part 2"
+description: "How I structured a multi-PR migration for AI delegation, and what actually made it work"
+date: 2026-05-26
+draft: true
+---
+
+> This post is a part 2 of the miniseries. Read part 1 [here](/blog/re-architecting-an-old-service-part-1).
+
+Porting [BrowserUp Proxy](https://github.com/browserup/browserup-proxy)'s feature set to [mitmproxy](https://github.com/mitmproxy/mitmproxy) meant porting more than a dozen distinct behaviors. Header injection. Basic and NTLM authentication. PDF handling. Cookie management. Content filtering. Debug capture. Each had edge cases, tests, and a reference implementation in Java on one side, with new Python addons needed on the other. Done serially this was many weeks of work.
+
+I used Claude Code to implement most of the feature ports in parallel. It went well, but not because the AI is some special tool. It went well because I spent real time before writing any code on what structure would make delegation reliable. Get the structure wrong and you get AI-generated code that looks plausible, compiles, and does the wrong thing. Get it right and you get implementations you can actually ship.
+
+## Designing for delegation
+
+AI agents work well on tasks that are self-contained, precisely scoped, and have a runnable definition of done. They work poorly on tasks that require judgment about things no spec captures, or decisions that constrain everything else. So the planning question I kept coming back to was: which pieces can I describe precisely enough that an agent can implement them without me answering follow-up questions?
+
+The answer shaped the PR structure. A single foundation PR established the shared infrastructure: the interface, the factory, the controller, the session config schema, the addon loading pattern. That one had to land first, because every subsequent PR depended on the pattern it established. After it merged, roughly a dozen feature PRs could run in any order. Each one touched a single Python addon file, its own fields in the shared config record, and its own tests. No feature PR overlapped with any other feature PR's addon.
+
+
+```txt
+              ┌──────────────────────────────────────┐
+              │           Foundation PR               │
+              │  interface · factory · controller     │
+              │  session config schema · addon loader │
+              └──────────────────┬───────────────────┘
+                                 │
+        ┌──────────┬─────────────┼─────────────┬──────────┐
+        │          │             │             │          │
+        ▼          ▼             ▼             ▼          ▼
+  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+  │ Feature  │ │ Feature  │ │ Feature  │ │ Feature  │ │   ...    │
+  └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
+                                                       ┌──────────┐
+                                                       │  Deploy  │
+                                                       └──────────┘
+```
+
+The foundation PR is where I spent the most upfront effort. Everything downstream is parallel, but only if the foundation is clear enough to follow consistently. I wrote it myself, documented the pattern explicitly, and treated it as something an agent could use as a reference. If it had been ambiguous, every feature PR would have inherited that ambiguity.
+
+## Three things that made it work
+
+**Written specs per feature.** Before handing off any feature PR, I wrote a short brief: what the addon does, which fields it reads from the session config, what the edge cases are, what the original Java filter does in each branch with notes on where mitmdump's behavior differs. Not a design doc. Just enough that the target was unambiguous. Vague specs produced drifting implementations that needed correction. Precise specs produced first passes I could iterate from directly.
+
+**Unit tests as acceptance criteria.** Each feature PR had tests, and those tests were the runnable definition of done. The AI could run them, read specific failure output, and adjust against that rather than against my prose description of what was wrong. This removed a slow feedback loop.
+
+**End-to-end tests against a real QA site.** This one changed things more than I expected, and it was a later addition to the project. Earlier on, verifying a new addon meant running a scan by hand, watching the behavior, writing up what was wrong, and feeding that back. Slow, and it required me to be the feedback mechanism, which serialized work that was supposed to be parallel.
+
+Once we had E2E tests running against an actual site in a QA environment — real HTTP traffic, real TLS negotiation, real server responses — the AI could close that loop without me. Implement, run the suite, read the failures, adjust, run again. By the time I reviewed a PR, it had already gone through several iterations against real behavior. The output quality was noticeably better than what I was seeing before the E2E tests existed. Synthetic unit tests cover cases you thought of in advance. Real traffic surfaces the ones you didn't.
+
+## Where course correction was still necessary
+
+This didn't run on autopilot. Three categories kept pulling me back in.
+
+The subprocess boundary has quirks that are not in the documentation and that I couldn't have anticipated in a spec. The timing of HAR file writes relative to process shutdown. Edge cases in how mitmdump handles specific TLS configurations. Hook ordering in the Python addon system under certain flow types. When these surfaced in failures, I diagnosed them directly, then either wrote the fix or rewrote the relevant part of the spec precisely enough for the AI to implement it.
+
+Some behaviors had to match BrowserUp exactly because downstream consumers depended on specific output formats. Others were worth improving, because BrowserUp's behavior in certain cases was a workaround, not a feature. The AI could not make that call. I made it, updated the spec, and the AI implemented the decision.
+
+The session config record is shared across all feature PRs. A field added in one addon can interact with logic in another. The AI worked on PRs in isolation and didn't carry that context. I tracked the interactions and flagged them when they became relevant.
+
+## What I'd carry forward
+
+The structure of the work mattered far more than any specific capability of the tool. The foundation PR, the per-feature scoping, the written specs, the unit tests, the E2E tests against real traffic — those were the decisions that determined what came out. A clear structure multiplied what the AI produced. A fuzzy one would have multiplied the rework instead.
+
+The work that benefited from delegation was the mechanical part: translating a precise behavioral spec into working code, covering each case in tests, iterating on failures until the suite passed. That is a large share of any implementation effort. The work that required judgment — diagnosing subprocess quirks, deciding where to match old behavior versus improve on it, designing the foundation that everything depended on — didn't go away. It just got concentrated where it actually mattered.
