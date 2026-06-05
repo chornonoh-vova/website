@@ -11,6 +11,8 @@ import ProxyManagerImpl from "../../assets/images/proxy-manager-impl.svg";
 import ProxyManagerFactoryImpl from "../../assets/images/proxy-manager-factory-impl.svg";
 import ProxyImplResolution from "../../assets/images/proxy-impl-resolution.svg";
 
+> This post is part 1 of the miniseries. Read part 2 [here](/blog/re-architecting-an-old-service-part-2).
+
 Every distributed system has a component that everyone quietly dreads touching. Ours was the proxy service.
 
 Its job is narrow: sit between the worker tier and the open internet, intercept and record HTTP traffic, and return a structured capture when a session ends. One microservice in a larger system, talked to by workers via a small REST API, configured by a config server, otherwise invisible. The problem was what it ran on. For years, the core was [BrowserUp Proxy](https://github.com/browserup/browserup-proxy), a Java library that embeds directly in the service's JVM. BrowserUp works. It just hasn't had a meaningful release in years. No security patches. No bug fixes. We had accumulated workarounds in our codebase for issues the upstream would never address, and every new capability we needed — new authentication types, reliable chunked encoding behavior, predictable certificate trust — meant writing more code on top of that unmaintained base.
