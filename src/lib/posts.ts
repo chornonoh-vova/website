@@ -13,6 +13,13 @@ export async function allBlogPosts() {
   return allPosts;
 }
 
+export function stripMdxImports(body: string | undefined): string {
+  return (body ?? "")
+    .split("\n")
+    .filter((line) => !line.startsWith("import "))
+    .join("\n");
+}
+
 export function getReadingTime(text: string | undefined): string | undefined {
   if (!text || !text.length) return undefined;
 

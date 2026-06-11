@@ -7,15 +7,23 @@ type Props = {
   title: string;
   description: string;
   ogImage?: string;
+  markdownUrl?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 };
 
-const { title, description, ogImage } = Astro.props;
+const { title, description, ogImage, markdownUrl, jsonLd } = Astro.props;
 ---
 
 <!doctype html>
 <html lang="en">
   <head>
-    <Head title={title} description={description} ogImage={ogImage} />
+    <Head
+      title={title}
+      description={description}
+      ogImage={ogImage}
+      markdownUrl={markdownUrl}
+      jsonLd={jsonLd}
+    />
 
     <style is:inline>
       body {

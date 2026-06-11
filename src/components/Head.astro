@@ -9,9 +9,20 @@ interface Props {
   title: string;
   description: string;
   ogImage?: string;
+  markdownUrl?: string;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
 }
 
-const { title, description, ogImage } = Astro.props;
+const { title, description, ogImage, markdownUrl, jsonLd } = Astro.props;
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_TITLE,
+  url: Astro.site?.toString(),
+};
+const extraJsonLd = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+const allJsonLd = [websiteJsonLd, ...extraJsonLd];
 
 const pageTitle = `${title} | ${SITE_TITLE}`;
 const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
@@ -22,6 +33,7 @@ const ogImageUrl = ogImage ?? new URL("/og-default.png", Astro.site).toString();
 <meta charset="utf-8" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="alternate icon" type="image/png" href="/favicon.png" />
+<link rel="shortcut icon" href="/favicon.ico" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="generator" content={Astro.generator} />
 <link rel="manifest" href="/manifest.json" />
@@ -31,6 +43,16 @@ const ogImageUrl = ogImage ?? new URL("/og-default.png", Astro.site).toString();
 
 <!-- Site map -->
 <link rel="sitemap" href="/sitemap-index.xml" />
+
+<!-- Structured data -->
+<script type="application/ld+json" set:html={JSON.stringify(allJsonLd)} />
+
+<!-- Markdown source (for blog posts) -->
+{
+  markdownUrl && (
+    <link rel="alternate" type="text/markdown" href={markdownUrl} />
+  )
+}
 
 <!-- RSS auto-discovery -->
 <link
