@@ -45,7 +45,11 @@ const ogImageUrl = ogImage ?? new URL("/og-default.png", Astro.site).toString();
 <link rel="sitemap" href="/sitemap-index.xml" />
 
 <!-- Structured data -->
-<script type="application/ld+json" set:html={JSON.stringify(allJsonLd)} />
+<script
+  is:inline
+  type="application/ld+json"
+  set:html={JSON.stringify(allJsonLd)}
+/>
 
 <!-- Markdown source (for blog posts) -->
 {

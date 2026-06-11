@@ -1,1 +1,8 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
 bunx lint-staged
+
+bun run typecheck
+

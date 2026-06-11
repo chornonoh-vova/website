@@ -1,8 +1,6 @@
-// @ts-check
 import { fileURLToPath, URL } from "node:url";
-import { defineConfig } from "eslint/config";
+import { defineConfig, includeIgnoreFile } from "eslint/config";
 import eslint from "@eslint/js";
-import { includeIgnoreFile } from "@eslint/compat";
 import tseslint from "typescript-eslint";
 import astro from "eslint-plugin-astro";
 import react from "eslint-plugin-react";

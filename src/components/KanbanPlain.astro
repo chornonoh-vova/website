@@ -47,45 +47,48 @@ const tasks = [
 </div>
 
 <script>
-  const columns = document.querySelectorAll(".task-column");
+  const columns = document.querySelectorAll<HTMLElement>(".task-column");
 
   for (const column of columns) {
     column.addEventListener("dragover", (event) => {
-      if (event.dataTransfer.types.includes("task")) {
+      if (event.dataTransfer?.types.includes("task")) {
         event.preventDefault();
       }
     });
   }
 
-  const tasks = document.querySelectorAll(".task-item");
+  const tasks = document.querySelectorAll<HTMLElement>(".task-item");
 
   for (const task of tasks) {
     task.addEventListener("dragstart", (event) => {
       task.id = "dragged-task";
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData("task", "");
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("task", "");
+      }
       setTimeout(() => {
-        event.target.style.display = "none";
+        task.style.display = "none";
       }, 0);
     });
 
-    task.addEventListener("dragend", (event) => {
+    task.addEventListener("dragend", () => {
       task.removeAttribute("id");
-      event.target.style.display = "block";
+      task.style.display = "block";
     });
   }
 
-  function createPlaceholder(draggedTask) {
-    const placeholder = draggedTask.cloneNode(true);
+  function createPlaceholder(draggedTask: HTMLElement) {
+    const placeholder = draggedTask.cloneNode(true) as HTMLElement;
     placeholder.classList.add("task-placeholder", "border-dashed");
     placeholder.removeAttribute("id");
     placeholder.style.display = "block";
     return placeholder;
   }
 
-  function movePlaceholder(event) {
-    const column = event.currentTarget;
+  function movePlaceholder(event: DragEvent) {
+    const column = event.currentTarget as HTMLElement;
     const draggedTask = document.getElementById("dragged-task");
+    if (!draggedTask) return;
     const tasks = column.children[1];
     const existingPlaceholder = column.querySelector(".task-placeholder");
     if (existingPlaceholder) {
@@ -115,7 +118,7 @@ const tasks = [
   for (const column of columns) {
     column.addEventListener("dragover", movePlaceholder);
     column.addEventListener("dragleave", (event) => {
-      if (column.contains(event.relatedTarget)) return;
+      if (column.contains(event.relatedTarget as Node | null)) return;
       const placeholder = column.querySelector(".task-placeholder");
       placeholder?.remove();
     });
@@ -125,7 +128,7 @@ const tasks = [
 
       const draggedTask = document.getElementById("dragged-task");
       const placeholder = column.querySelector(".task-placeholder");
-      if (!placeholder) return;
+      if (!draggedTask || !placeholder) return;
       draggedTask.remove();
       column.children[1].insertBefore(draggedTask, placeholder);
       placeholder.remove();

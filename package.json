@@ -4,11 +4,11 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
     "prepare": "husky",
-    "check": "astro check",
+    "typecheck": "astro check",
     "lint": "eslint .",
     "fmt": "prettier --write --ignore-unknown .",
     "svg-colors": "bun ./scripts/svg-colors.ts"
@@ -42,7 +42,6 @@
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {
-    "@eslint/compat": "^2.1.0",
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",

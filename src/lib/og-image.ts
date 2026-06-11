@@ -16,10 +16,24 @@ const fonts: Parameters<typeof satori>[1]["fonts"] = [
   { name: "Inter", data: fontBold, weight: 700, style: "normal" },
 ];
 
-export async function renderOGImage(
-  node: Parameters<typeof satori>[0],
-): Promise<Response> {
-  const svg = await satori(node, { width: 1200, height: 630, fonts });
+// Satori's types declare ReactNode, but it accepts plain element-shaped
+// object trees at runtime, which is how our OG routes build their markup.
+export type OGNode = {
+  type: string;
+  props: {
+    style?: Record<string, string | number>;
+    children?: OGNode | OGNode[] | string;
+  };
+};
+
+export async function renderOGImage(node: OGNode): Promise<Response> {
+  const svg = await satori(node as Parameters<typeof satori>[0], {
+    width: 1200,
+    height: 630,
+    fonts,
+  });
   const png = new Resvg(svg).render().asPng();
-  return new Response(png, { headers: { "Content-Type": "image/png" } });
+  return new Response(new Uint8Array(png), {
+    headers: { "Content-Type": "image/png" },
+  });
 }
