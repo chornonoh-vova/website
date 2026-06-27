@@ -22,16 +22,16 @@
     "@astrojs/vercel": "^10.0.8",
     "@datastructures-js/queue": "^4.3.0",
     "@fontsource/inter": "^5.2.8",
-    "@formkit/drag-and-drop": "^0.6.0",
+    "@formkit/drag-and-drop": "^0.6.1",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/forms": "^0.5.11",
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "astro": "^6.4.6",
+    "astro": "^6.4.8",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.18.0",
+    "lucide-react": "^1.21.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-to-string": "^4.0.0",
     "motion": "^12.40.0",
@@ -45,7 +45,7 @@
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/parser": "^8.61.0",
+    "@typescript-eslint/parser": "^8.61.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^10.5.0",
     "eslint-plugin-astro": "^1.7.0",
@@ -58,6 +58,6 @@
     "prettier-plugin-astro": "^0.14.1",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.0"
+    "typescript-eslint": "^8.61.1"
   }
 }
