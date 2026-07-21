@@ -1,7 +1,7 @@
 import satori from "satori";
 import { Resvg } from "@resvg/resvg-js";
-import { readFileSync } from "fs";
-import { resolve } from "path";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const fontRegular = readFileSync(
   resolve("node_modules/@fontsource/inter/files/inter-latin-400-normal.woff"),

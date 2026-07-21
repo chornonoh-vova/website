@@ -54,8 +54,8 @@ class Graph {
       if (!this.#edges.has(b)) {
         this.#edges.set(b, new Set());
       }
-      this.#edges.get(a)!.add(b);
-      this.#edges.get(b)!.add(a);
+      this.#edges.get(a)?.add(b);
+      this.#edges.get(b)?.add(a);
     }
   }
 
@@ -194,6 +194,7 @@ export const LANGraph = ({
 
   return (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 134.63 72">
+      <title>Interactive network graph of connected computers</title>
       <g className="graph" transform="matrix(.77965 0 0 .77965 3.119 68.882)">
         <g className="edge">
           <title>kh--tc</title>
@@ -516,10 +517,20 @@ export const LANGraph = ({
           />
         </g>
 
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight kh"
           onClick={() => pointerOver("kh")}
           onPointerOver={() => pointerOver("kh")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("kh");
+            }
+          }}
         >
           <title>kh</title>
           <circle
@@ -531,10 +542,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight tc"
           onClick={() => pointerOver("tc")}
           onPointerOver={() => pointerOver("tc")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("tc");
+            }
+          }}
         >
           <title>tc</title>
           <circle
@@ -546,10 +567,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight ub"
           onClick={() => pointerOver("ub")}
           onPointerOver={() => pointerOver("ub")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("ub");
+            }
+          }}
         >
           <title>ub</title>
           <circle
@@ -561,10 +592,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight ta"
           onClick={() => pointerOver("ta")}
           onPointerOver={() => pointerOver("ta")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("ta");
+            }
+          }}
         >
           <title>ta</title>
           <circle
@@ -576,10 +617,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight td"
           onClick={() => pointerOver("td")}
           onPointerOver={() => pointerOver("td")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("td");
+            }
+          }}
         >
           <title>td</title>
           <circle
@@ -591,10 +642,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight qp"
           onClick={() => pointerOver("qp")}
           onPointerOver={() => pointerOver("qp")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("qp");
+            }
+          }}
         >
           <title>qp</title>
           <circle
@@ -606,10 +667,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight de"
           onClick={() => pointerOver("de")}
           onPointerOver={() => pointerOver("de")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("de");
+            }
+          }}
         >
           <title>de</title>
           <circle
@@ -621,10 +692,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight cg"
           onClick={() => pointerOver("cg")}
           onPointerOver={() => pointerOver("cg")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("cg");
+            }
+          }}
         >
           <title>cg</title>
           <circle
@@ -636,10 +717,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight co"
           onClick={() => pointerOver("co")}
           onPointerOver={() => pointerOver("co")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("co");
+            }
+          }}
         >
           <title>co</title>
           <circle
@@ -651,10 +742,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight tb"
           onClick={() => pointerOver("tb")}
           onPointerOver={() => pointerOver("tb")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("tb");
+            }
+          }}
         >
           <title>tb</title>
           <circle
@@ -666,10 +767,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight ka"
           onClick={() => pointerOver("ka")}
           onPointerOver={() => pointerOver("ka")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("ka");
+            }
+          }}
         >
           <title>ka</title>
           <circle
@@ -681,10 +792,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight yn"
           onClick={() => pointerOver("yn")}
           onPointerOver={() => pointerOver("yn")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("yn");
+            }
+          }}
         >
           <title>yn</title>
           <circle
@@ -696,10 +817,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight aq"
           onClick={() => pointerOver("aq")}
           onPointerOver={() => pointerOver("aq")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("aq");
+            }
+          }}
         >
           <title>aq</title>
           <circle
@@ -711,10 +842,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight vc"
           onClick={() => pointerOver("vc")}
           onPointerOver={() => pointerOver("vc")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("vc");
+            }
+          }}
         >
           <title>vc</title>
           <circle
@@ -726,10 +867,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight wq"
           onClick={() => pointerOver("wq")}
           onPointerOver={() => pointerOver("wq")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("wq");
+            }
+          }}
         >
           <title>wq</title>
           <circle
@@ -741,10 +892,20 @@ export const LANGraph = ({
             }
           />
         </g>
+        {/* biome-ignore lint/a11y/useSemanticElements: can't use button here */}
         <g
           className="node"
+          role="button"
+          tabIndex={0}
+          aria-label="Highlight wh"
           onClick={() => pointerOver("wh")}
           onPointerOver={() => pointerOver("wh")}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              pointerOver("wh");
+            }
+          }}
         >
           <title>wh</title>
           <circle

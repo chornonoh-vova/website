@@ -85,6 +85,7 @@ export function LevenshteinVisualization() {
                   <span className="sr-only">Word 2 - empty prefix</span>
                 </th>
                 {word2.split("").map((c, j) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size header row, column position is the identity
                   <th scope="col" key={j} className={clsx(cell, headerBg)}>
                     <span className="sr-only">Word 2 - index {j}</span>
                     {c}
@@ -94,6 +95,7 @@ export function LevenshteinVisualization() {
             </thead>
             <tbody>
               {matrix.map((row, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size matrix row, row position is the identity
                 <tr key={i}>
                   <th scope="row" className={clsx(cell, headerBg)}>
                     {i > 0 ? (
@@ -106,6 +108,7 @@ export function LevenshteinVisualization() {
                     )}
                   </th>
                   {row.map((val, j) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size matrix cell, column position is the identity
                     <td key={j} className={cell}>
                       {val}
                     </td>

@@ -1,6 +1,12 @@
 import clsx from "clsx";
 import { motion } from "motion/react";
-import { useEffect, useId, useState, type ComponentPropsWithRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useState,
+  type ComponentPropsWithRef,
+} from "react";
 import { RefreshCw } from "lucide-react";
 import { Queue } from "@datastructures-js/queue";
 
@@ -177,10 +183,10 @@ export const FloodFillVisualization = ({
   const [fillIdx, setFillIdx] = useState(-1);
   const [fill, setFill] = useState<Pixel[]>([]);
 
-  const resetFill = () => {
+  const resetFill = useCallback(() => {
     setFillIdx(-1);
     setFill([]);
-  };
+  }, []);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -205,7 +211,7 @@ export const FloodFillVisualization = ({
     return () => {
       clearInterval(intervalId);
     };
-  }, [image, fill, fillIdx, fillColor]);
+  }, [image, fill, fillIdx, fillColor, resetFill]);
 
   const onResetClick = () => {
     resetFill();
@@ -237,12 +243,15 @@ export const FloodFillVisualization = ({
         <ControlButton onClick={onResetClick}>
           <RefreshCw className="size-3.5" /> Reset
         </ControlButton>
-        <ColorSelect onChange={(e) => onFillChange(parseInt(e.target.value))} />
+        <ColorSelect
+          onChange={(e) => onFillChange(parseInt(e.target.value, 10))}
+        />
       </div>
       <div className="grid grid-cols-[repeat(10,24px)] justify-center gap-1">
         {image.map((row, rowIdx) => {
           return row.map((pixelColor, colIdx) => (
             <motion.button
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size pixel grid, cell position is the identity
               key={`${rowIdx}-${colIdx}`}
               aria-label={`pixel-${rowIdx}-${colIdx}`}
               whileHover={{ scale: 1.2 }}

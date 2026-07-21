@@ -14,9 +14,11 @@ const {
 } = Astro.props;
 ---
 
+<!-- biome-ignore lint/a11y/useAnchorContent: content is provided by callers via <slot />, always non-empty in practice -->
+<!-- biome-ignore lint/a11y/useValidAnchor: href is provided by callers via {...props}, not statically visible here -->
 <a
   class={clsx([
-    "decoration-black/30 dark:decoration-white/40 hover:decoration-black/50 hover:dark:decoration-white/70 text-current hover:text-black hover:dark:text-white",
+    "text-current decoration-black/30 hover:text-black hover:decoration-black/50 dark:decoration-white/40 hover:dark:text-white hover:dark:decoration-white/70",
     { "underline underline-offset-2": underline },
     { "font-medium": ariaCurrent === "page" },
     classNames,

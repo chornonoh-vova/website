@@ -91,6 +91,7 @@ const rssUrl = new URL("rss.xml", Astro.site);
     <ul class="flex flex-col gap-2">
       {
         recentBlogs.map((post) => (
+          // biome-ignore lint/correctness/useJsxKeyInIterable: Astro templates don't use React reconciliation; `key` isn't a supported prop here
           <li>
             <PostCard entry={post} />
           </li>

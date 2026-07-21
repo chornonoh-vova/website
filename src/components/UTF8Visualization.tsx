@@ -71,13 +71,15 @@ function ToggleGroupItem<T>({
   const handleClick = () => setCurrentValue(value);
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: intentional button-based segmented control (WAI-ARIA APG radiogroup-button pattern); a native <input type="radio"> would require reworking the Tailwind-driven selected-state styling
     <button
+      type="button"
       role="radio"
       aria-checked={isSelected}
       data-selected={isSelected}
       tabIndex={0}
       onClick={handleClick}
-      className="inline-flex flex-1 items-center justify-center gap-1 border border-neutral-200 px-3 py-1.75 first:rounded-l-sm last:rounded-r-sm hover:bg-neutral-100 data-[selected=true]:border-indigo-200 data-[selected=true]:bg-indigo-100 dark:border-neutral-700 dark:hover:bg-neutral-800 data-[selected=true]:dark:border-indigo-700 data-[selected=true]:dark:bg-indigo-800"
+      className="inline-flex flex-1 items-center justify-center gap-1 border border-neutral-200 px-3 py-1.75 first:rounded-l-sm last:rounded-r-sm hover:bg-neutral-100 data-[selected=true]:border-indigo-200 data-[selected=true]:bg-indigo-100 dark:border-neutral-700 data-[selected=true]:dark:border-indigo-700 data-[selected=true]:dark:bg-indigo-800 dark:hover:bg-neutral-800"
       {...rest}
     >
       {children}
@@ -113,6 +115,7 @@ function MapTable({
       </thead>
       <tbody className="bg-white dark:bg-gray-800">
         {map.map(([ch, bytes], i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: fixed character sequence, position disambiguates repeated characters
           <tr key={`${ch}-${i}`}>
             <th scope="row" className={cell}>
               "{ch}"
@@ -133,6 +136,7 @@ function Bytes({ bytes }: { bytes: string[] }) {
       <span className="inline-flex flex-wrap gap-0.5 align-baseline">
         {bytes.map((b, i) => (
           <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: fixed byte sequence, position disambiguates repeated byte values
             key={`${b}-${i}`}
             className="rounded-sm border border-neutral-200 px-1 font-mono dark:border-neutral-700"
           >

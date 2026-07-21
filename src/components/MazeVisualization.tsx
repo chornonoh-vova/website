@@ -105,7 +105,7 @@ class UnionFind {
 function posKey(pos: [number, number]): string;
 function posKey(pos: Position): string;
 function posKey(pos: [number, number] | Position): string {
-  let x, y;
+  let x: number, y: number;
   if (Array.isArray(pos)) {
     [x, y] = pos;
   } else {

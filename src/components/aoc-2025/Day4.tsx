@@ -126,9 +126,10 @@ export function Day4() {
         {grid.map((row, rowIdx) =>
           row.map((cell, colIdx) => (
             <p
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed-size grid, cell position is the identity
               key={`${rowIdx}-${colIdx}`}
               className={clsx(
-                "text-center font-mono font-bold",
+                "text-center font-bold font-mono",
                 cell === ROLL && isAccessible(grid, rowIdx, colIdx)
                   ? "text-red-600 dark:text-red-400"
                   : "text-neutral-600 dark:text-neutral-400",

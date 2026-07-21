@@ -16,11 +16,12 @@ if (
   !href.startsWith("/") &&
   !href.startsWith("#")
 ) {
-  attrs["target"] = "_blank";
-  attrs["rel"] = "noopener noreferrer";
+  attrs.target = "_blank";
+  attrs.rel = "noopener noreferrer";
 }
 ---
 
+<!-- biome-ignore lint/a11y/useAnchorContent: content is provided by callers via <slot />, always non-empty in practice -->
 <a href={href} {...attrs}>
   <slot />
 </a>

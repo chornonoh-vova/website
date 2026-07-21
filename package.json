@@ -9,8 +9,8 @@
     "astro": "astro",
     "prepare": "husky",
     "typecheck": "astro check",
-    "lint": "eslint .",
-    "fmt": "prettier --write --ignore-unknown .",
+    "lint": "biome check .",
+    "fmt": "biome check --write --unsafe .",
     "svg-colors": "bun ./scripts/svg-colors.ts"
   },
   "dependencies": {
@@ -42,22 +42,12 @@
     "tailwindcss": "^4.3.2"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@biomejs/biome": "^2.5.4",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/parser": "^8.62.1",
     "babel-plugin-react-compiler": "^1.0.0",
-    "eslint": "^10.6.0",
-    "eslint-plugin-astro": "^2.1.1",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-react": "^7.37.5",
-    "eslint-plugin-react-hooks": "^7.1.1",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
-    "prettier": "^3.9.4",
-    "prettier-plugin-astro": "^0.14.1",
-    "prettier-plugin-tailwindcss": "^0.8.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.62.1"
+    "typescript": "^6.0.3"
   }
 }

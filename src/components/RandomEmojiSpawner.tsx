@@ -83,7 +83,7 @@ export function RandomEmojiSpawner() {
           {emojis.map(({ id, emoji, top, left }) => (
             <motion.span
               key={id}
-              className="absolute origin-center -translate-1/2 leading-none"
+              className="-translate-1/2 absolute origin-center leading-none"
               style={{ top, left }}
               transition={
                 reducedMotion ? undefined : { type: "spring", bounce: 0.5 }
@@ -106,7 +106,7 @@ export function RandomEmojiSpawner() {
             checked={inert}
             onChange={(e) => setInert(e.target.checked)}
           />
-          <label htmlFor="inert" className="text-sm/6 font-medium">
+          <label htmlFor="inert" className="font-medium text-sm/6">
             Inert
           </label>
         </div>

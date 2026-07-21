@@ -1,6 +1,6 @@
 import clsx from "clsx";
 import { Play, RotateCcw, Shuffle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "./ui/Button";
 
 class SudokuState {
@@ -158,6 +158,7 @@ function SudokuBoard({
       {sudoku.map((row, rowIdx) => {
         return row.map((val, colIdx) => (
           <div
+            // biome-ignore lint/suspicious/noArrayIndexKey: fixed 9x9 board, cell position is the identity
             key={`cell-${rowIdx}-${colIdx}`}
             className={clsx(
               "border-neutral-400 text-center first:rounded-tl-[7px] last:rounded-br-[7px]",
@@ -202,11 +203,11 @@ export function SudokuSolverVisualization() {
     setSolutionIdx(0);
   };
 
-  const resetSolution = () => {
+  const resetSolution = useCallback(() => {
     setSolutionIdx(-1);
     setSolutionSteps([]);
     setLastUpdated(null);
-  };
+  }, []);
 
   const reset = () => {
     resetSolution();
@@ -244,7 +245,7 @@ export function SudokuSolverVisualization() {
     return () => {
       clearInterval(intervalId);
     };
-  }, [sudoku, solutionSteps, solutionIdx]);
+  }, [sudoku, solutionSteps, solutionIdx, resetSolution]);
 
   return (
     <div className="not-prose mx-auto flex flex-col items-center gap-2">

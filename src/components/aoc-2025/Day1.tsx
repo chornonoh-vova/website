@@ -106,7 +106,7 @@ export function Day1() {
     const gen: [string, number, number, number][] = [];
     for (const instruction of instructions) {
       const direction = instruction.substring(0, 1) as Direction;
-      const amount = parseInt(instruction.substring(1));
+      const amount = parseInt(instruction.substring(1), 10);
 
       safeRef.current.turn(direction, amount, (dial, part1, part2) => {
         gen.push([instruction, dial, part1, part2]);
@@ -152,9 +152,11 @@ export function Day1() {
       </div>
 
       <svg width="100%" height="100%" viewBox="0 0 500 500">
+        <title>Combination dial simulation</title>
         <g transform="translate(250,250)">
           {TICKS.map((t, i) => {
             return (
+              // biome-ignore lint/suspicious/noArrayIndexKey: fixed static tick array, position is the identity
               <g key={i}>
                 <line {...t.tick} className="stroke-black dark:stroke-white" />
                 <text

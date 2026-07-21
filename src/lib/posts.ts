@@ -1,7 +1,7 @@
 import { getCollection } from "astro:content";
 import calculateReadingTime from "reading-time";
 import { fromMarkdown } from "mdast-util-from-markdown";
-import { toString } from "mdast-util-to-string";
+import { toString as mdastToString } from "mdast-util-to-string";
 
 export async function allBlogPosts() {
   const allPosts = (await getCollection("blog")).filter(
@@ -21,10 +21,10 @@ export function stripMdxImports(body: string | undefined): string {
 }
 
 export function getReadingTime(text: string | undefined): string | undefined {
-  if (!text || !text.length) return undefined;
+  if (!text?.length) return undefined;
 
   try {
-    const { minutes } = calculateReadingTime(toString(fromMarkdown(text)));
+    const { minutes } = calculateReadingTime(mdastToString(fromMarkdown(text)));
     if (minutes && minutes > 0) {
       return `${Math.ceil(minutes)} min read`;
     }

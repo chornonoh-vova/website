@@ -100,13 +100,13 @@ function CacheStats({
   }
 
   if (typeof lastValue === "string") {
-    lastResult = "Hit: " + lastValue;
+    lastResult = `Hit: ${lastValue}`;
   }
 
   return (
     <div className="grid grid-cols-2 rounded-md border border-neutral-300 text-neutral-950 shadow-sm dark:border-neutral-700 dark:text-neutral-50">
       <div className="border-e border-e-neutral-300 px-4 py-2 dark:border-e-neutral-700">
-        <p className="text-xs text-neutral-600 dark:text-neutral-300">Stats</p>
+        <p className="text-neutral-600 text-xs dark:text-neutral-300">Stats</p>
         <p className="inline-flex w-full flex-wrap gap-1 text-sm">
           <span>Hits {hits}</span>
           <span>Misses {misses}</span>
@@ -121,7 +121,7 @@ function CacheStats({
           },
         )}
       >
-        <p className="text-xs text-neutral-600 dark:text-neutral-300">
+        <p className="text-neutral-600 text-xs dark:text-neutral-300">
           Last Result
         </p>
         <p className="text-sm">{lastResult}</p>
@@ -152,7 +152,7 @@ export function CacheControls({
       return;
     }
 
-    const value = getValue!(key);
+    const value = getValue?.(key);
     if (value === undefined) {
       setMisses((m) => m + 1);
     } else {
@@ -169,14 +169,14 @@ export function CacheControls({
       return;
     }
 
-    setKeyValue!(key, value);
+    setKeyValue?.(key, value);
   };
 
   const onResetClick = () => {
     setLastValue(null);
     setHits(0);
     setMisses(0);
-    reset!();
+    reset?.();
   };
 
   return (
@@ -186,6 +186,7 @@ export function CacheControls({
 
         {reset && (
           <button
+            type="button"
             onClick={onResetClick}
             className="rounded-sm border border-neutral-300 px-2 text-sm dark:border-neutral-700"
           >
@@ -197,14 +198,14 @@ export function CacheControls({
       <CacheStats lastValue={lastValue} hits={hits} misses={misses} />
 
       {getValue && (
-        <div className="flex flex-row items-end-safe gap-2">
+        <div className="items-end-safe flex flex-row gap-2">
           <Input label="Key to get" ref={getKeyRef} type="text" />
           <Button onClick={onGetClick}>Get</Button>
         </div>
       )}
 
       {setKeyValue && (
-        <div className="flex flex-row items-end-safe gap-2">
+        <div className="items-end-safe flex flex-row gap-2">
           <Input label="Key to set" ref={setKeyRef} type="text" />
           <Input label="Value to set" ref={setValueRef} type="text" />
           <Button onClick={onSetClick}>Set</Button>
@@ -228,13 +229,13 @@ function CacheItemText({
   return (
     <p
       className={clsx(
-        "border border-transparent px-4 py-1 text-sm text-neutral-950 dark:text-neutral-50",
+        "border border-transparent px-4 py-1 text-neutral-950 text-sm dark:text-neutral-50",
         borderEnd &&
           "rounded-s-sm border-e border-e-neutral-300 dark:border-e-neutral-700",
         className,
       )}
     >
-      <span className="text-xs text-neutral-600 dark:text-neutral-300">
+      <span className="text-neutral-600 text-xs dark:text-neutral-300">
         {label}:
       </span>
       <br />
