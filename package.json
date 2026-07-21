@@ -15,11 +15,11 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.9.9",
-    "@astrojs/mdx": "^7.0.2",
+    "@astrojs/mdx": "^7.0.3",
     "@astrojs/react": "^6.0.1",
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.3",
-    "@astrojs/vercel": "^11.0.2",
+    "@astrojs/vercel": "^11.0.3",
     "@datastructures-js/queue": "^4.3.0",
     "@fontsource/inter": "^5.2.8",
     "@formkit/drag-and-drop": "^0.6.1",
@@ -31,14 +31,14 @@
     "@vercel/speed-insights": "^2.0.0",
     "astro": "7.1.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.23.0",
+    "lucide-react": "^1.24.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-to-string": "^4.0.0",
     "motion": "^12.42.2",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "reading-time": "^1.5.0",
-    "satori": "^0.26.0",
+    "satori": "^0.28.0",
     "tailwindcss": "^4.3.2"
   },
   "devDependencies": {
@@ -48,6 +48,6 @@
     "babel-plugin-react-compiler": "^1.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
