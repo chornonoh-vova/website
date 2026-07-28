@@ -10,3 +10,7 @@ updates:
       dependencies:
         patterns:
           - "*"
+    ignore:
+      # TODO: typescript v7.0 is lacking the JS APIs
+      - dependency-name: "typescript"
+        versions: ["7.0.x"]
