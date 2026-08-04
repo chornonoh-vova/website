@@ -1,0 +1,523 @@
+---
+title: "Structured Concurrency in Java 25"
+description: "Build a parallel dashboard API, uncover wasted work after failures, and see how structured concurrency fixes it."
+date: 2026-08-06
+---
+
+import SequentialExecution from "../../components/SequentialExecution";
+import ParallelExecution from "../../components/ParallelExecution";
+import SequentialExecutionWithFailure from "../../components/SequentialExecutionWithFailure";
+import ParallelExecutionWithWaste from "../../components/ParallelExecutionWithWaste";
+import ParallelExecutionWithCancel from "../../components/ParallelExecutionWithCancel";
+
+Imagine you're building a dashboard for an e-commerce application.
+
+When a user opens the page, they expect to see everything at once:
+
+- their profile
+- recent orders
+- unread notifications
+- personalized recommendations
+
+Nothing extraordinary. Just another REST endpoint.
+
+```http
+GET /dashboard
+```
+
+But, in our imaginary application, these pieces of information don't live in
+the same place, each of them is in a separate service, so our API needs to
+call them before returning the response.
+
+The easiest implementation is the most obvious one:
+
+1. Call each service
+2. Wait for the response
+3. Move to the next service
+
+```java
+@GetMapping("/dashboard")
+public DashboardDto getDashboard() {
+  log.info("Starting dashboard request");
+  DashboardDto dashboard = new DashboardDto();
+
+  dashboard.setProfile(profileService.getProfile());
+  dashboard.setOrders(ordersService.getOrdersList());
+  dashboard.setNotifications(notificationsService.getNotificationsList());
+  dashboard.setRecommendations(recommendationsService.getRecommendationsList());
+
+  log.info("Finishing dashboard request");
+  return dashboard;
+}
+```
+
+<details class="rounded-md border border-neutral-200 dark:border-neutral-700 p-2 details-content:-m-2 details-content:p-2">
+  <summary>A note on the services</summary>
+Each of the four services looks the same way:
+
+```java
+@Slf4j
+@Service
+public class NotificationsService {
+  private final RestClient restClient = RestClient.create();
+
+  public List<NotificationDto> getNotificationsList() {
+    log.info("Starting notifications request");
+    List<NotificationDto> notifications = restClient.get()
+        .uri("http://notifications-service/notifications")
+        .retrieve()
+        .body(new ParameterizedTypeReference<>() {});
+    log.info("Finishing notifications request");
+    return notifications;
+  }
+}
+```
+
+The other three differ only in the name and the endpoint. In the demo I ran to
+collect the output below, each of the services calls a local endpoint that just
+sleeps for a fixed number of milliseconds rather than a real service, so the timings
+stay reproducible without standing up four actual services.
+
+> That `log` is coming from Lombok's `@Slf4j` annotation, and each of the four services
+is written the same way — one log line on the way in, one on the way out.
+</details>
+
+Here's a small visualization of what is going on — expand **Show logs** underneath
+it to see what the application prints while those bars fill:
+
+<SequentialExecution client:visible />
+
+Each service is requested sequentially, therefore the duration of this API
+request is the sum of durations of all of the calls to other services.
+
+Ok, it's not ideal, but we can make the endpoint perform better by parallelizing
+each of those calls!
+
+```java
+@GetMapping("/dashboard")
+public DashboardDto getDashboard() throws InterruptedException, ExecutionException {
+  log.info("Starting dashboard request");
+  CompletableFuture<ProfileDto> profileFuture =
+      CompletableFuture.supplyAsync(() -> profileService.getProfile());
+  CompletableFuture<List<OrderDto>> ordersFuture =
+      CompletableFuture.supplyAsync(() -> ordersService.getOrdersList());
+  CompletableFuture<List<NotificationDto>> notificationsFuture =
+      CompletableFuture.supplyAsync(() -> notificationsService.getNotificationsList());
+  CompletableFuture<List<RecommendationDto>> recommendationsFuture =
+      CompletableFuture.supplyAsync(() -> recommendationsService.getRecommendationsList());
+
+  CompletableFuture.allOf(
+      profileFuture, ordersFuture, notificationsFuture, recommendationsFuture
+  ).join();
+
+  DashboardDto dashboard = new DashboardDto();
+
+  dashboard.setProfile(profileFuture.get());
+  dashboard.setOrders(ordersFuture.get());
+  dashboard.setNotifications(notificationsFuture.get());
+  dashboard.setRecommendations(recommendationsFuture.get());
+
+  log.info("Finishing dashboard request");
+  return dashboard;
+}
+```
+
+In this example, we start all of the futures asynchronously and execute them
+in parallel, then we wait for all of the results in `allOf(...).join()`.
+
+There's one detail here that comes back later. `supplyAsync` without a second
+argument runs the task on `ForkJoinPool.commonPool()`. That pool is sized for CPU
+work, one thread fewer than your core count, and it's shared with every parallel
+stream and every other `CompletableFuture` in the JVM. We've just given it four
+tasks that do nothing but wait on a socket.
+
+Here's what it looks like, visualized:
+
+<ParallelExecution client:visible />
+
+In this case, the total duration of the execution will be the maximum
+duration of one of the service requests (in this case, recommendations
+service). 890ms down to 310ms (almost 3x speedup!), and we barely touched the code.
+
+## What happens when one of them fails
+
+Start with the sequential version, where the answer is boring. That's the point:
+it's the baseline that parallelism quietly takes away.
+
+<SequentialExecutionWithFailure client:visible />
+
+Notifications service throws, and that's the end of it. Recommendations service is
+never called, because the line that would have called it never runs. There's no
+cleanup to think about and nothing left over: the stack unwinds and takes the whole
+request with it.
+
+Let's take a look now at the same failure but in the parallel version:
+
+<ParallelExecutionWithWaste client:visible />
+
+Look at how much later the exception reaches the log than the failure that caused
+it. `allOf(...).join()` waits for *every* future, and it has no notion of one of
+them having already made the result worthless. So orders and recommendations carry
+on to their natural end, log their "Finishing" lines into a request that is already
+dead, and only then does the `CompletionException` surface.
+
+The numbers are right there in the diagram. We know about the failure at 170ms,
+the caller hears about it at 310ms, and 230ms of thread time goes into two results
+that nobody reads. On a single request that's just untidy. At a few hundred requests
+a second, that's the common pool spending its threads on answers that are already
+garbage instead of on requests that could still succeed.
+
+The obvious fix is to cancel the futures we don't need anymore. It doesn't work.
+The javadoc for `CompletableFuture.cancel` is blunt about why:
+
+> `mayInterruptIfRunning` — this value has no effect in this implementation
+> because interrupts are not used to control processing.
+
+And the javadoc isn't overstating it. Decompile `cancel` and the boolean
+parameter is never read at all: the method completes the future with a
+`CancellationException` and returns. `cancel(true)` gives you back `true`,
+`isCancelled()` starts answering `true`, and the thread underneath keeps running to
+the end. We cancelled our view of the result. The work carries on.
+
+So this is what we actually want:
+
+<ParallelExecutionWithCancel client:visible />
+
+## Doing it by hand
+
+Getting that behaviour isn't a matter of adding a few `cancel` calls to what we
+already have. `CompletableFuture` can't express it at all. Interruption only works
+through `Future.cancel` on a real `ExecutorService`, so we have to put
+`CompletableFuture` down and pick up a different set of APIs: `ExecutorService`,
+`Future` and `ExecutorCompletionService`.
+
+That version looks like this:
+
+```java
+@GetMapping("/dashboard")
+@SuppressWarnings("unchecked")
+public DashboardDto getDashboard() throws InterruptedException, ExecutionException {
+  log.info("Starting dashboard request");
+  try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+    var completion = new ExecutorCompletionService<Object>(executor);
+
+    Future<Object> profileFuture =
+        completion.submit(() -> profileService.getProfile());
+    Future<Object> ordersFuture =
+        completion.submit(() -> ordersService.getOrdersList());
+    Future<Object> notificationsFuture =
+        completion.submit(() -> notificationsService.getNotificationsList());
+    Future<Object> recommendationsFuture =
+        completion.submit(() -> recommendationsService.getRecommendationsList());
+
+    var all = List.of(profileFuture, ordersFuture, notificationsFuture, recommendationsFuture);
+
+    for (int i = 0; i < all.size(); i++) {
+      try {
+        completion.take().get();
+      } catch (ExecutionException exception) {
+        for (Future<?> sibling : all) {
+          sibling.cancel(true);
+        }
+        throw exception;
+      }
+    }
+
+    DashboardDto dashboard = new DashboardDto();
+
+    dashboard.setProfile((ProfileDto) profileFuture.get());
+    dashboard.setOrders((List<OrderDto>) ordersFuture.get());
+    dashboard.setNotifications((List<NotificationDto>) notificationsFuture.get());
+    dashboard.setRecommendations((List<RecommendationDto>) recommendationsFuture.get());
+
+    log.info("Finishing dashboard request");
+    return dashboard;
+  }
+}
+```
+
+Three things that make it work:
+
+- `ExecutorCompletionService` instead of joining futures in order. `take()` blocks
+  until some task finishes, so you find out about the failure at the moment it
+  fails. Joining `profileFuture`, then `ordersFuture`, then others gets you the
+  failure only after everything ahead of it in your hand-written order has finished.
+- `Future.cancel(true)` on an `ExecutorService` task does set the interrupt, unlike
+  `CompletableFuture.cancel(true)`.
+- `try`-with-resources on the executor. `close()` shuts down and waits, so the
+  method can't return or throw while a subtask is still alive.
+
+But have you noticed how the complexity suddenly exploded? I had to research every
+one of those three points to get this right, and none of them is visible in the code.
+Neither are the ways it can still bite:
+
+- `ExecutorCompletionService<Object>` plus casts. It's built for homogeneous task
+  sets, so four different return types means `Object` on the way out and a cast on
+  the way back in. Three of those four casts are unchecked, which is what the
+  `@SuppressWarnings` on the method is quietly hiding.
+- The loop counter is load-bearing. Nothing prevents us from calling `take()` three
+  times instead of four, and if we do, the fourth task runs on past the end of the
+  request with nothing waiting for it and nothing to report it.
+- Cancellation still only works if the task is interruptible. Blocking I/O on a
+  virtual thread is, which is why cancellation works here. But if a subtask ignores
+  interrupts, `close()` waits on it *indefinitely*.
+- There's no timeout anywhere in this, and adding one means a third mechanism
+  bolted alongside the two already here.
+
+There's one more idea worth mentioning, because it's the one I reached for first:
+let each task cancel its siblings when it fails, instead of doing it from the waiting
+thread. For that, every task needs a reference to the list of futures, and that list
+doesn't exist until the last `submit` returns. So the first task can start and fail
+while the array it's supposed to read is still half empty. To fix it properly you
+need a latch that parks every task until the list is published. So now there's a race
+in there too, and races are much harder to spot in review than tedium.
+
+So I asked myself a question: can I do this in a simpler way?
+
+## The same thing, structured
+
+Yes, and that's what structured concurrency is for. It arrived in its current
+shape in Java 25, the latest LTS.
+
+```java
+@GetMapping("/dashboard")
+public DashboardDto getDashboard() throws InterruptedException {
+  log.info("Starting dashboard request");
+  try (var scope = StructuredTaskScope.open()) {
+    Subtask<ProfileDto> profileTask =
+        scope.fork(() -> profileService.getProfile());
+    Subtask<List<OrderDto>> ordersTask =
+        scope.fork(() -> ordersService.getOrdersList());
+    Subtask<List<NotificationDto>> notificationsTask =
+        scope.fork(() -> notificationsService.getNotificationsList());
+    Subtask<List<RecommendationDto>> recommendationsTask =
+        scope.fork(() -> recommendationsService.getRecommendationsList());
+
+    scope.join();
+
+    DashboardDto dashboard = new DashboardDto();
+
+    dashboard.setProfile(profileTask.get());
+    dashboard.setOrders(ordersTask.get());
+    dashboard.setNotifications(notificationsTask.get());
+    dashboard.setRecommendations(recommendationsTask.get());
+
+    log.info("Finishing dashboard request");
+    return dashboard;
+  }
+}
+```
+
+That gives us exactly [the timeline from the end of the last
+section](#parallel-execution-with-cancel). Same 170ms, same two interrupted
+siblings, same 230ms saved. The difference is all the code we didn't have to write.
+
+The no-argument `StructuredTaskScope.open()` uses the
+`Joiner.awaitAllSuccessfulOrThrow()` policy: it waits for every subtask, and
+the moment one of them fails it interrupts the threads running the others, then
+makes `join()` throw a `FailedException` wrapping the original error. Subtasks
+run on virtual threads by default, so there's no executor to configure. And coming
+back to that detail from the beginning, there's no `ForkJoinPool` shared with the
+rest of the application to starve.
+
+Notice what's *missing* compared to both of the earlier versions. There's no
+`ExecutionException` in the signature, because `FailedException` is unchecked.
+There's no completion queue, no loop counter, no cast, no `@SuppressWarnings`.
+And the waste from two diagrams ago isn't something you have to remember to avoid:
+interrupting the siblings is the `Joiner`'s job rather than yours, and `close()`
+won't let the `try` block exit while a subtask is still alive. Where
+`CompletableFuture` gave you no way to stop the other three, the scope gives you no
+way *not* to.
+
+One caveat carries over from the manual version: cancellation is still cooperative.
+The scope interrupts the sibling threads, but a subtask that never reaches an
+interruptible point keeps going until it does. The scope guarantees that nothing
+escapes the block. It can't guarantee that everything inside it stops on command.
+Blocking I/O on a virtual thread is interruptible, which is why this works for our
+four HTTP calls.
+
+The price is that this is still a [preview API](https://openjdk.org/jeps/505), so
+you need a flag to compile and run any of it:
+
+```groovy
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs << "--enable-preview"
+}
+
+bootRun {
+    jvmArgs = ["--enable-preview"]
+}
+
+test {
+    jvmArgs = ["--enable-preview"]
+}
+```
+
+If running through IntelliJ IDEA, you'll need to add `--enable-preview` to the VM
+options of the run configuration. And be aware that classes compiled with preview
+features refuse to load on any other JVM version, so you can't compile on 25 and
+run on 26.
+
+At this point, the dashboard problem is solved. The remaining sections examine the
+API you will need beyond this example.
+
+## How the scope works
+
+The dashboard only needed `open()` and `join()`. The rest of this section is what
+you'll want once your code stops looking like the example.
+
+### Why "structured"
+
+The name comes from structured programming. Before `if` and `while` and blocks,
+control flow was `goto`: a jump could land anywhere, so you couldn't read a region
+of code and know what would run. Blocks fixed that by giving every region one entry
+and one exit.
+
+Concurrency is still in the `goto` era. `supplyAsync` starts work that outlives the
+line that started it, on a thread with no relationship to the one that asked for it.
+That's exactly why our two orphaned calls could keep logging into a request that was
+already dead. A `StructuredTaskScope` puts the block back: subtasks get forked inside
+it, `join()` is the one place they're waited for, and `close()` can't finish while
+any of them is still alive.
+
+And the JVM enforces this rather than trusting you to follow it. `fork`, `join` and
+`close` all have to be called by the thread that opened the scope. Scopes also nest: a subtask that opens
+its own scope becomes a branch of a tree the JVM knows about, which is what makes
+these threads readable in a thread dump.
+
+### Joiners decide the policy
+
+The `Joiner` answers two questions: what are we waiting for, and what happens when
+one of these fails? Java 25 ships five.
+
+<div class="overflow-x-scroll">
+
+| `Joiner`                       | `join()` returns     | When a subtask fails                          |
+| ------------------------------ | -------------------- | --------------------------------------------- |
+| `awaitAllSuccessfulOrThrow()`  | `Void`               | cancels the rest, throws `FailedException`    |
+| `awaitAll()`                   | `Void`               | nothing — you inspect each `Subtask` yourself |
+| `allSuccessfulOrThrow()`       | `Stream<Subtask<T>>` | cancels the rest, throws `FailedException`    |
+| `anySuccessfulResultOrThrow()` | `T`                  | waits for another; throws only if all fail    |
+| `allUntil(Predicate)`          | `Stream<Subtask<T>>` | up to your predicate                          |
+
+</div>
+
+The no-argument `open()` is shorthand for the first one. The interesting one for a
+dashboard is the fourth, because it inverts the policy. First useful answer wins,
+and the losers get cancelled:
+
+```java
+try (var scope = StructuredTaskScope.open(
+    Joiner.<PriceDto>anySuccessfulResultOrThrow())) {
+  scope.fork(() -> primaryPricing.getPrice(sku));
+  scope.fork(() -> fallbackPricing.getPrice(sku));
+
+  // Returns the first of the two to succeed, and interrupts the other.
+  return scope.join();
+}
+```
+
+Note that `join()`'s return type changes with the joiner. That's the second type
+parameter on `StructuredTaskScope<T, R>`: `T` is what the subtasks produce, `R` is
+what `join()` hands back.
+
+### `Subtask` has three states, and `get()` respects them
+
+`Subtask.get()` is not `Future.get()`. It never blocks, and instead of a checked
+exception it throws `IllegalStateException` when there's no result to give:
+
+```java
+try (var scope = StructuredTaskScope.open(Joiner.<Object>awaitAll())) {
+  Subtask<List<NotificationDto>> notificationsTask =
+      scope.fork(() -> notificationsService.getNotificationsList());
+
+  scope.join();
+
+  DashboardDto dashboard = new DashboardDto();
+
+  if (notificationsTask.state() == Subtask.State.SUCCESS) {
+    dashboard.setNotifications(notificationsTask.get());
+  } else {
+    log.warn("notifications unavailable", notificationsTask.exception());
+    dashboard.setNotifications(List.of());
+  }
+}
+```
+
+The states are `UNAVAILABLE` before `join()` returns (and permanently, for a subtask
+that got cancelled), then `SUCCESS` or `FAILED`. Calling `get()` on anything but
+`SUCCESS` throws, and so does calling it before `join()`.
+
+This one is easy to miss, because with `awaitAllSuccessfulOrThrow()` you never hit
+it. That joiner guarantees every subtask succeeded by the time `join()` returns, so
+`get()` is always safe there. Switch to `awaitAll()` because you want partial
+results, and suddenly it isn't.
+
+It's also genuinely useful. `awaitAll()` plus `state()` is how you say "the dashboard
+should still render if recommendations are down", which none of the all-or-nothing
+versions earlier could express.
+
+### Timeouts and names
+
+The second `open()` overload takes a configuration function, and that's where the
+timeout the manual version never had comes from:
+
+```java
+try (var scope = StructuredTaskScope.open(
+    Joiner.<Object>awaitAllSuccessfulOrThrow(),
+    config -> config.withName("dashboard").withTimeout(Duration.ofSeconds(2)))) {
+```
+
+When the deadline passes, the scope is cancelled the same way a failure cancels it,
+and `join()` throws `StructuredTaskScope.TimeoutException`, unchecked like
+`FailedException`. `withName` is what labels the scope in thread dumps, and
+`withThreadFactory` is there for the times you need subtasks on platform threads
+rather than virtual ones.
+
+## Should you use it yet?
+
+Structured concurrency is still a preview API, which means it can change
+between releases, and it has. [JEP 505](https://openjdk.org/jeps/505) in Java
+25 is the redesign that replaced the old `ShutdownOnFailure` subclasses with
+the `Joiner` policies used above, so most tutorials written before it won't
+compile at all.
+
+Java 26's [JEP 525](https://openjdk.org/jeps/525) is the sixth preview and only
+polishes the edges: `allSuccessfulOrThrow()` returns a `List` instead of a
+`Stream`, `anySuccessfulResultOrThrow()` was renamed to
+`anySuccessfulOrThrow()`, and `Joiner` gained an `onTimeout()` hook. Of everything
+above, only the joiner table and that two-way pricing example would need touching.
+The dashboard compiles unchanged on both.
+
+[JEP 533](https://openjdk.org/jeps/533) is done and lands in Java 27 as the seventh
+preview, not the finalization — seven rounds in, Java 28 is the earliest that could
+change. This one reaches further into the code above. The three throwing joiners
+make `join()` throw a plain `ExecutionException` instead of `FailedException`, and
+each gains an overload taking a `Function` to supply your own exception instead. A
+timeout arrives the same way now, an `ExecutionException` caused by
+`CancelledByTimeoutException` rather than its own `TimeoutException`, though
+`config.withTimeout(...)` itself is untouched. `Joiner.onTimeout()`, new in Java 26,
+is already replaced by `timeout()`. And `awaitAll()` is gone outright, which takes
+the partial-results dashboard with it; `allUntil(subtask -> false)` is the closest
+thing left.
+
+So, my answer: not in code you can't recompile on demand. The shape of the API has
+held steady since JEP 505 and what's left is renames, but preview still means the
+flag, and the flag pins your class files to one JVM version.
+
+The idea is worth taking either way, and that part doesn't need a flag. Go back to
+the sequential version at the top. Its real advantage was never readability. A
+failure there had nowhere to go but up, and nothing was left running by the time it
+got there. We gave that up the moment we typed `supplyAsync`, and everything
+in the middle of this article was us buying it back by hand: a completion queue to
+notice the failure, a loop to cancel the siblings, a `close()` so nothing outlived
+the method.
+
+With a scope, none of that is our job anymore. Concurrent work has the same lifetime
+as the block it's written in, and the runtime keeps it there. We get the guarantees
+of the sequential version and the speed of the parallel one, and the diagram with two
+calls still computing answers for a dead request becomes something you'd have to work
+at to write.
+
+> All of the examples are available in a [demo repository](https://github.com/chornonoh-vova/concurrency-demo),
+easily runnable with Gradle.
