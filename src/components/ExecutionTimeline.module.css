@@ -1,0 +1,15 @@
+@keyframes bar-grow {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--bar-span);
+  }
+}
+
+.bar {
+  animation-name: bar-grow;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+  animation-play-state: var(--play, paused);
+}
