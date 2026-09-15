@@ -44,7 +44,11 @@ The rest of this post is what those documents decided.
 ## The forest
 
 <Figure caption="Barklog's architecture">
-  <BarklogArchitecture class="mx-auto" />
+  <BarklogArchitecture
+    class="mx-auto"
+    role="img"
+    aria-label="An Expo mobile app calls a Hono API over HTTPS. The API reads a Postgres database and a Valkey cache, and talks to Clerk, RevenueCat, and OpenAI. A nightly worker upserts IGDB data into Postgres."
+  />
 </Figure>
 
 Four things Barklog owns:
@@ -53,7 +57,8 @@ Four things Barklog owns:
 - an HTTP API
 - a Postgres database
 - a worker that wakes up once a night
-- Valkey sits next to the API and caches a couple of things.
+
+Valkey sits next to the API and caches a couple of things.
 
 Four things it doesn't own:
 
@@ -90,7 +95,7 @@ The whole API is authenticated. The exceptions are the two health checks and the
 
 For a backlog tracker that sounds heavy-handed, and it's the decision I'd defend fastest, because of what it deletes. An app with an anonymous mode has two of everything: two versions of most screens, two sets of empty states, a migration path for the moment an anonymous user signs up and wants their existing data to follow them, and a permanent question at the top of every new feature about whether logged-out users get it. None of that exists here. There's one state, and every screen gets to assume a user.
 
-The part worth stealing is how the API checks that user. Clerk issues a JWT, and the API verifies it against Clerk's published signing keys, which it fetches and caches. A request arrives, gets verified locally, and proceeds. Clerk is never called.
+The part worth stealing is how the API checks that user. Clerk issues a JWT, and the API verifies it against Clerk's published signing keys, which it fetches and caches. A request arrives, gets verified locally, and proceeds. Clerk isn't in the request path.
 
 That's the IGDB argument again wearing a different hat. A third party you call on every request has quietly handed you its latency and its uptime, and an identity provider sits in front of every route you have, so it would hand you those for the entire application at once. Verifying a signature against a cached public key costs microseconds and can't go down.
 
