@@ -1,0 +1,157 @@
+---
+title: "Shipping Barklog: Part 1"
+description: "An agent wrote most of the code, so the hard part moved somewhere else: into the architecture, and into the documents that decided it"
+date: 2026-09-15
+---
+
+import Figure from "../../components/Figure.astro";
+import BarklogArchitecture from "../../assets/images/barklog-architecture.svg";
+
+> This post is part 1 of a four-part miniseries about building Barklog. Parts 2, 3 and 4 aren't published yet; the end of this post says what they cover.
+
+If you play games, you own games you haven't played. There's a Steam library full of sale purchases, a subscription catalogue you opened twice, two things a friend insisted on, and a low-grade guilt attached to the whole pile. You know roughly how big the pile is. You couldn't name what's in it.
+
+That's the entire problem. Not a hard problem, and not a new one. A backlog is a list, and people have been writing lists down for a while.
+
+What I wanted was the list that survives the moment you're not at a computer. You see a game in a video at eleven at night, you think "that one", and by morning it's gone. So I built Barklog: it tracks the games you own, the ones you're actually playing, and the ones you keep meaning to finish, with a dog mascot keeping score. It's iOS-only, it's on the App Store now, and the whole thing is open source at [chornonoh-vova/barklog](https://github.com/chornonoh-vova/barklog), specs and plans included.
+
+This post isn't really about the backlog, though. It's about what happened to the shape of the work when I built it with a coding agent, and why the architecture ended up looking the way it does.
+
+## The brief I didn't write
+
+Barklog exists because of [RevenueCat Shipaton 2026](https://www.shipaton.com/), a build competition with a hard submission deadline at the end of September. I entered the Influencer Award for Gaming, judged by Mr Lewis Blogs Gaming. The category description asks for a gaming bucket-list app that makes it easy to save games at the moment of discovery, and says it'll be judged on how well people can organize, complete, rate and share their games, and on whether managing a backlog feels enjoyable rather than like another chore.
+
+Two sentences, written by a stranger, and better than most of the requirements documents I've written for my own side projects. Not because they're insightful. Because they're fixed.
+
+Side projects don't usually die of bad code or a bad stack. They die of being redefined every week, until the accumulated half-finished directions outweigh anything shippable. A brief you didn't write and can't edit removes that failure mode. Every design question had the same tiebreaker: which option serves save, organize, complete, rate, share? When I couldn't pick between two data models, I didn't deliberate about taste. I re-read two sentences.
+
+The deadline did the same work from the other end. One date settled a surprising number of arguments, including what length of free trial to offer, which turns out to be a scheduling question rather than a pricing one.
+
+## The contractor who never asks "are you sure?"
+
+Here's the part I got wrong going in.
+
+Everyone agrees by now that a coding agent makes you faster. I agreed too, and I was picturing the wrong bottleneck. I thought the constraint on a two-week build was how fast code could be produced, and that removing it would mean I'd spend two weeks typing at ten times my usual speed.
+
+Working with an agent is closer to being handed a contractor who builds exactly what you describe, overnight, to a high standard, and never once asks "are you sure?" On a team, a bad decision gets caught in a corridor conversation before it reaches a branch. Someone squints at you. With an agent, a bad decision gets built, thoroughly, across every file it touches, and it looks correct when it's done, because it is correct relative to what you asked for.
+
+So the question stopped being "how do I get this built" and became "do I actually know what I want built." That question has to be answered somewhere, and it can't be answered in code, because code is the thing being decided about.
+
+It got answered in prose. Over about two weeks I wrote more English about Barklog than there is TypeScript in it: design documents, rejected alternatives, implementation plans. The first thing in the repository that isn't scaffolding is a design document, not a line of application code. I didn't plan that as a methodology. It's what the work turned into once typing stopped being the constraint.
+
+The rest of this post is what those documents decided.
+
+## The forest
+
+<Figure caption="Barklog's architecture">
+  <BarklogArchitecture
+    class="mx-auto"
+    role="img"
+    aria-label="An Expo mobile app calls a Hono API over HTTPS. The API reads a Postgres database and a Valkey cache, and talks to Clerk, RevenueCat, and OpenAI. A nightly worker upserts IGDB data into Postgres."
+  />
+</Figure>
+
+Four things Barklog owns:
+
+- an Expo app
+- an HTTP API
+- a Postgres database
+- a worker that wakes up once a night
+
+Valkey sits next to the API and caches a couple of things.
+
+Four things it doesn't own:
+
+- [IGDB](https://www.igdb.com/), the games database Twitch runs, supplies every game in the app
+- Clerk handles identity
+- RevenueCat handles purchases
+- OpenAI turns a link somebody shared into a guess at which game it's about.
+
+Almost every interesting decision in this project is about that second list, and specifically about which of those four a user ever has to wait for. RevenueCat and OpenAI get their own posts, so I'll leave them alone here. The other two shaped everything else.
+
+## Barklog owns a copy of every game
+
+The obvious way to build this is to call IGDB when a user searches. Barklog doesn't. A nightly worker copies IGDB's entire games table into Postgres, all 374,000 rows, and the API only ever reads from that copy.
+
+This sounds like more work than it is. 374,000 games is about 748 requests at IGDB's page size, which is a few minutes once a night. The thing you buy for those few minutes is that IGDB stops being able to affect Barklog at runtime. Their rate limit isn't your rate limit. Their latency isn't in your p99. Their outage isn't your outage, and their outage at 2 a.m. on the Saturday your app gets posted somewhere isn't your problem either.
+
+There's a second-order benefit that mattered more than I expected. Once the data is local, search is just SQL, and you can rank it however you like. If you're proxying a third-party API you get their ranking and their filters and you build around them.
+
+The part I'd steal for other projects is how the boundary is enforced. `apps/api` has no IGDB client anywhere in its dependency graph. Not "we agreed not to call IGDB from the API" — the package simply isn't installed there. The design can't quietly regress into a live proxy under deadline pressure, because regressing means someone adds a dependency on purpose, in a diff, with their name on it. Conventions rot. Manifests don't.
+
+## Failure is a no-op
+
+The sync worker has no error recovery path, and that's the design rather than an omission.
+
+A run takes an advisory lock, reads a watermark from the last successful run, pages through everything IGDB has changed since then, and writes each page in a transaction. If a run fails, it's marked failed and the watermark doesn't advance. The next run re-fetches the same range.
+
+That works because every write is an upsert and the join rows for a page get replaced wholesale, so replaying a range that partly succeeded produces the same database as replaying one that wholly failed. Re-running is always safe.
+
+The line in the design document I keep coming back to: there is no repair path to write, because there is no partial state to repair. Most of the operational pain I've had in my career has come from systems where a half-finished job leaves something that is neither the old state nor the new one, and somebody has to write a script to reconcile it, usually at a bad hour. You can design that category of problem out. It costs a watermark and a discipline about idempotent writes.
+
+## Nobody is anonymous
+
+The whole API is authenticated. The exceptions are the two health checks and the two webhook endpoints, one for Clerk and one for RevenueCat, which prove themselves with a signature instead of a token. There's no public read path, no browse-without-an-account mode, and the root of the app is a sign-in view you can't dismiss.
+
+For a backlog tracker that sounds heavy-handed, and it's the decision I'd defend fastest, because of what it deletes. An app with an anonymous mode has two of everything: two versions of most screens, two sets of empty states, a migration path for the moment an anonymous user signs up and wants their existing data to follow them, and a permanent question at the top of every new feature about whether logged-out users get it. None of that exists here. There's one state, and every screen gets to assume a user.
+
+The part worth stealing is how the API checks that user. Clerk issues a JWT, and the API verifies it against Clerk's published signing keys, which it fetches and caches. A request arrives, gets verified locally, and proceeds. Clerk isn't in the request path.
+
+That's the IGDB argument again wearing a different hat. A third party you call on every request has quietly handed you its latency and its uptime, and an identity provider sits in front of every route you have, so it would hand you those for the entire application at once. Verifying a signature against a cached public key costs microseconds and can't go down.
+
+Identity flows the other way too. Clerk owns the user record, which means deleting an account is Clerk's event rather than Barklog's. A `user.deleted` webhook arrives, and the API removes that user's rows and scrubs their subscription events in a single transaction. Barklog never has to maintain its own idea of what a deleted user is. The delete is also written to succeed on a user who has already gone, rather than throw, because webhooks get redelivered and a second delivery shouldn't be an error. That's the same instinct as the sync worker: make the repeat case boring.
+
+Apple turned out to have opinions about account deletion that made this more interesting than it sounds. That's part 4.
+
+## Search is mostly one word
+
+Search runs on Postgres trigram matching, which needs no extra container and tolerates typos. The word that makes it work is `word_similarity`, and not the more obvious `similarity`.
+
+Plain `similarity` compares two whole strings. Type `zeld`, and against `The Legend of Zelda: Ocarina of Time` it scores near zero, because the target is long and almost entirely non-matching. The correct answer looks wrong to the algorithm for a reason that has nothing to do with relevance. `word_similarity` scores the query against the best-matching span of words inside the name instead, so `zeld` matches `Zelda` strongly and the length of the rest stops mattering.
+
+Relevance alone still isn't enough:
+
+```sql
+ORDER BY 0.6 * word_similarity($1, name)
+       + 0.4 * LEAST(total_rating_count, 500)::real / 500 DESC
+```
+
+That second term is popularity, and it's what stops `mario` returning an obscure ROM hack above _Super Mario Odyssey_. Both match the string about equally well. Only one of them is what anybody meant.
+
+Neither half works alone. Pure relevance surfaces trivia, pure popularity surfaces the same twenty games for every query.
+
+## The cache can't take the site down
+
+Two rules, and the second one is the one I'd argue for anywhere.
+
+Invalidation is a version bump. Search results are stored under a key that includes a counter, and when the nightly sync finishes it increments the counter. Every key from the previous version becomes unreachable in one operation and expires on its own schedule. No key scanning, no delete lists, no invalidation logic that can be wrong for one code path and right for the others. The class of bug where stale data survives because somebody forgot a cache-clear call doesn't have anywhere to live.
+
+The cache is fail-open. If Valkey is unreachable, the wrapper logs it and the caller goes to Postgres. The site gets slower. It doesn't get an error page. A cache holds nothing that can't be recomputed, so a cache should never be able to take a service down, and that only holds if you write the fallback path on the first day rather than after the first incident.
+
+Game details are deliberately not cached at all, which surprised me when I decided it. The response varies per user, and the read underneath is a few indexed joins. Caching it would have added an invalidation problem in exchange for almost nothing.
+
+## The app is two UI frameworks, for one reason
+
+The mobile app draws its lists with React Native and its controls with SwiftUI through `@expo/ui`. That sounds like indecision. It's one constraint, followed honestly.
+
+`@expo/ui`'s `Image` takes an SF Symbol, an asset-catalog name, or a local file URI. It has no remote-URL prop. Every list in Barklog is cover art served from IGDB's CDN, so a SwiftUI list would need a bridged React Native host view for every visible row, which is the kind of thing that works in a demo and then stutters on a real scroll. React Native lists remove the bridge. SwiftUI keeps the controls: real segmented pickers, real menus, real glass buttons.
+
+What stops the result from looking like two applications stitched together is colour. Every React Native colour comes from `PlatformColor`, which resolves the same iOS dynamic system colours the SwiftUI controls are already using. Light mode, dark mode, no `useColorScheme` branch to keep in sync, no palette to drift.
+
+The decision I'd defend hardest is that this rule got written down once, as a table, before any screen existed. A hybrid UI without a written rule becomes a per-component argument you have fifty times, and you lose it slightly differently each time.
+
+## What it cost
+
+Two things, and I underestimated both.
+
+Review became the job, and review doesn't compress. An agent that writes ten times faster doesn't leave you with a tenth of the work. You get ten times as much diff to read, at the same reading speed you had before, and every line still has to be understood by whoever's on the hook for it at 2 a.m. You can skip that, but then you've got a system nobody can debug. My reading speed was the ceiling on the whole project, and I don't have a clever fix for it. I just read a lot of diffs.
+
+A wrong document costs more than wrong code. Wrong code fails a test, or fails review. A wrong design document gets implemented faithfully and fast, everywhere it applies, and looks finished. The free tier is my example: the original proposal capped you at ten games total, which sounds reasonable until you notice that a finished game would occupy its slot forever, so the paywall would arrive on exactly the behaviour the app exists to encourage and then never move again. Catching that in a document cost an afternoon of rewriting. Catching it after implementation would have cost a schema migration and a client change.
+
+## Where this leaves things
+
+The speed of an agent-assisted build isn't really speed at typing. It moves the expensive part upstream, into deciding what should exist, and it punishes vagueness much harder than a normal project does, because vagueness gets built. Every architectural choice above is a decision that was cheap to make in a paragraph and would have been costly to discover in code: keeping IGDB out of the request path, making failure a no-op, refusing to have anonymous users at all, ranking search on two terms instead of one, letting the cache fail open, drawing the hybrid UI line once.
+
+Part 2 is the share pipeline, and the problem of turning an arbitrary link somebody sent you into a specific game. Part 3 is the free tier: where the cap is enforced, and what happens when a purchase and a webhook race each other. Part 4 is App Review, and the parts of shipping an app that an agent couldn't do for me.
+
+One thing I'd like an opinion on, if you have one. The free tier caps you at 10 unfinished games, meaning `waiting` or `playing`, and finishing one gives the slot back. Completed and abandoned games are unlimited. I'm honestly not sure ten is right rather than merely defensible. If you've used it: is 10 too tight? If the answer comes back clearly one way, I'll ship the change. I'm posting about this under #Shipaton on LinkedIn, and every design document quoted above is in [the repository](https://github.com/chornonoh-vova/barklog) under `docs/`, rejected alternatives and all.
