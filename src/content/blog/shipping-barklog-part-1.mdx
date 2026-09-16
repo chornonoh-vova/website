@@ -2,12 +2,18 @@
 title: "Shipping Barklog: Part 1"
 description: "An agent wrote most of the code, so the hard part moved somewhere else: into the architecture, and into the documents that decided it"
 date: 2026-09-15
+series:
+  name: "Shipping Barklog"
+  part: 1
+  label: "The architecture the docs decided"
 ---
 
 import Figure from "../../components/Figure.astro";
+import SeriesNav from "../../components/SeriesNav.astro";
+
 import BarklogArchitecture from "../../assets/images/barklog-architecture.svg";
 
-> This post is part 1 of a four-part miniseries about building Barklog. Parts 2, 3 and 4 aren't published yet; the end of this post says what they cover.
+<SeriesNav name="Shipping Barklog" current="shipping-barklog-part-1" />
 
 If you play games, you own games you haven't played. There's a Steam library full of sale purchases, a subscription catalogue you opened twice, two things a friend insisted on, and a low-grade guilt attached to the whole pile. You know roughly how big the pile is. You couldn't name what's in it.
 
@@ -19,7 +25,9 @@ This post isn't really about the backlog, though. It's about what happened to th
 
 ## The brief I didn't write
 
-Barklog exists because of [RevenueCat Shipaton 2026](https://www.shipaton.com/), a build competition with a hard submission deadline at the end of September. I entered the Influencer Award for Gaming, judged by Mr Lewis Blogs Gaming. The category description asks for a gaming bucket-list app that makes it easy to save games at the moment of discovery, and says it'll be judged on how well people can organize, complete, rate and share their games, and on whether managing a backlog feels enjoyable rather than like another chore.
+Barklog got built because of two things. The first was "From Any Engineer to GenAI Engineer", an internal learning programme at [Sombra](https://sombrainc.com/), the company I work for. It's the reason I started this at all. The second was [RevenueCat Shipaton 2026](https://www.shipaton.com/), a build competition with a hard submission deadline at the end of September, which supplied the part I couldn't write for myself.
+
+I entered the Influencer Award for Gaming, judged by Mr Lewis Blogs Gaming. The category description asks for a gaming bucket-list app that makes it easy to save games at the moment of discovery, and says it'll be judged on how well people can organize, complete, rate and share their games, and on whether managing a backlog feels enjoyable rather than like another chore.
 
 Two sentences, written by a stranger, and better than most of the requirements documents I've written for my own side projects. Not because they're insightful. Because they're fixed.
 
@@ -53,7 +61,7 @@ The rest of this post is what those documents decided.
 
 Four things Barklog owns:
 
-- an Expo app
+- an [Expo](https://expo.dev/) app
 - an HTTP API
 - a Postgres database
 - a worker that wakes up once a night
@@ -63,9 +71,9 @@ Valkey sits next to the API and caches a couple of things.
 Four things it doesn't own:
 
 - [IGDB](https://www.igdb.com/), the games database Twitch runs, supplies every game in the app
-- Clerk handles identity
-- RevenueCat handles purchases
-- OpenAI turns a link somebody shared into a guess at which game it's about.
+- [Clerk](https://clerk.com/) handles identity
+- [RevenueCat](https://www.revenuecat.com/) handles purchases
+- [OpenAI](https://platform.openai.com/) turns a link somebody shared into a guess at which game it's about.
 
 Almost every interesting decision in this project is about that second list, and specifically about which of those four a user ever has to wait for. RevenueCat and OpenAI get their own posts, so I'll leave them alone here. The other two shaped everything else.
 
@@ -105,7 +113,7 @@ Apple turned out to have opinions about account deletion that made this more int
 
 ## Search is mostly one word
 
-Search runs on Postgres trigram matching, which needs no extra container and tolerates typos. The word that makes it work is `word_similarity`, and not the more obvious `similarity`.
+Search runs on [Postgres trigram matching](https://www.postgresql.org/docs/current/pgtrgm.html), which needs no extra container and tolerates typos. The word that makes it work is `word_similarity`, and not the more obvious `similarity`.
 
 Plain `similarity` compares two whole strings. Type `zeld`, and against `The Legend of Zelda: Ocarina of Time` it scores near zero, because the target is long and almost entirely non-matching. The correct answer looks wrong to the algorithm for a reason that has nothing to do with relevance. `word_similarity` scores the query against the best-matching span of words inside the name instead, so `zeld` matches `Zelda` strongly and the length of the rest stops mattering.
 
@@ -134,9 +142,9 @@ Game details are deliberately not cached at all, which surprised me when I decid
 
 The mobile app draws its lists with React Native and its controls with SwiftUI through `@expo/ui`. That sounds like indecision. It's one constraint, followed honestly.
 
-`@expo/ui`'s `Image` takes an SF Symbol, an asset-catalog name, or a local file URI. It has no remote-URL prop. Every list in Barklog is cover art served from IGDB's CDN, so a SwiftUI list would need a bridged React Native host view for every visible row, which is the kind of thing that works in a demo and then stutters on a real scroll. React Native lists remove the bridge. SwiftUI keeps the controls: real segmented pickers, real menus, real glass buttons.
+[`@expo/ui`](https://docs.expo.dev/versions/v57.0.0/sdk/ui/)'s `Image` takes an SF Symbol, an asset-catalog name, or a local file URI. It has no remote-URL prop. Every list in Barklog is cover art served from IGDB's CDN, so a SwiftUI list would need a bridged React Native host view for every visible row, which is the kind of thing that works in a demo and then stutters on a real scroll. React Native lists remove the bridge. SwiftUI keeps the controls: real segmented pickers, real menus, real glass buttons.
 
-What stops the result from looking like two applications stitched together is colour. Every React Native colour comes from `PlatformColor`, which resolves the same iOS dynamic system colours the SwiftUI controls are already using. Light mode, dark mode, no `useColorScheme` branch to keep in sync, no palette to drift.
+What stops the result from looking like two applications stitched together is colour. Every React Native colour comes from [`PlatformColor`](https://reactnative.dev/docs/platformcolor), which resolves the same iOS dynamic system colours the SwiftUI controls are already using. Light mode, dark mode, no `useColorScheme` branch to keep in sync, no palette to drift.
 
 The decision I'd defend hardest is that this rule got written down once, as a table, before any screen existed. A hybrid UI without a written rule becomes a per-component argument you have fifty times, and you lose it slightly differently each time.
 
@@ -152,6 +160,6 @@ A wrong document costs more than wrong code. Wrong code fails a test, or fails r
 
 The speed of an agent-assisted build isn't really speed at typing. It moves the expensive part upstream, into deciding what should exist, and it punishes vagueness much harder than a normal project does, because vagueness gets built. Every architectural choice above is a decision that was cheap to make in a paragraph and would have been costly to discover in code: keeping IGDB out of the request path, making failure a no-op, refusing to have anonymous users at all, ranking search on two terms instead of one, letting the cache fail open, drawing the hybrid UI line once.
 
-Part 2 is the share pipeline, and the problem of turning an arbitrary link somebody sent you into a specific game. Part 3 is the free tier: where the cap is enforced, and what happens when a purchase and a webhook race each other. Part 4 is App Review, and the parts of shipping an app that an agent couldn't do for me.
+[Part 2](/blog/shipping-barklog-part-2/) is the share pipeline, and the problem of turning an arbitrary link somebody sent you into a specific game. Part 3 is the free tier: where the cap is enforced, and what happens when a purchase and a webhook race each other. Part 4 is App Review, and the parts of shipping an app that an agent couldn't do for me.
 
 One thing I'd like an opinion on, if you have one. The free tier caps you at 10 unfinished games, meaning `waiting` or `playing`, and finishing one gives the slot back. Completed and abandoned games are unlimited. I'm honestly not sure ten is right rather than merely defensible. If you've used it: is 10 too tight? If the answer comes back clearly one way, I'll ship the change. I'm posting about this under #Shipaton on LinkedIn, and every design document quoted above is in [the repository](https://github.com/chornonoh-vova/barklog) under `docs/`, rejected alternatives and all.

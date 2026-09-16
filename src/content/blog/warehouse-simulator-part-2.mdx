@@ -2,12 +2,18 @@
 title: "Warehouse simulator from scratch: Part 2"
 description: "Finishing up the simulator inspired by Advent of Code 2024, Day 15"
 date: 2025-06-28
+series:
+  name: "Warehouse simulator from scratch"
+  part: 2
+  label: "Wide containers"
 ---
+
+import SeriesNav from "../../components/SeriesNav.astro";
 
 import WarehouseContainerLeftRight from "../../assets/images/warehouse-container-left-right.svg";
 import WarehouseContainerUp from "../../assets/images/warehouse-container-up.svg";
 
-> This post is a part 2 of the miniseries. Read part 1 [here](/blog/warehouse-simulator-part-1).
+<SeriesNav name="Warehouse simulator from scratch" current="warehouse-simulator-part-2" />
 
 Part 2 introduces wide containers — two-cell entities rather than single boxes — which means the movement logic gets significantly more complex.
 

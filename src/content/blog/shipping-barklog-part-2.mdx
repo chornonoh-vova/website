@@ -1,0 +1,184 @@
+---
+title: "Shipping Barklog: Part 2"
+description: "A share sheet hands your app a string, and the thing the person meant isn't in it. This is the machinery for getting it back, and the defences a server needs once it fetches links strangers send it"
+date: 2026-09-16
+series:
+  name: "Shipping Barklog"
+  part: 2
+  label: "The share pipeline"
+---
+
+import SeriesNav from "../../components/SeriesNav.astro";
+import Figure from "../../components/Figure.astro";
+
+import BarklogSharingFlow from "../../assets/images/barklog-sharing-flow.svg";
+import BarklogMetadataExtraction from "../../assets/images/barklog-metadata-extraction.svg";
+import BarklogSafeFetch from "../../assets/images/barklog-safe-fetch.svg";
+
+<SeriesNav name="Shipping Barklog" current="shipping-barklog-part-2" />
+
+It's late, you're on your phone, a game goes past in a video, and you want to keep it. So you do the most ordinary thing a phone can do: hit share, pick an app. Nobody thinks about that gesture while making it. It's two taps and a row of icons and it's worked the same way for a decade.
+
+What the receiving app gets is a string. Usually something like `https://www.youtube.com/watch?v=1vs0lLIRt7w`: eleven characters of opaque identifier attached to a hostname. The game you meant isn't in there. The title isn't in there. Nothing about the thing you wanted to remember survived the tap.
+
+Part 1 was the architecture an agent-assisted build pushed me into. This one is a single feature inside it, and it's the feature where all the interesting work is recovery: turning that string back into a specific row in a games database, without handing a stranger a server that fetches whatever URL they type.
+
+## What a share sheet actually hands you
+
+Barklog takes shares through [`expo-sharing`](https://docs.expo.dev/versions/v57.0.0/sdk/sharing/), first-party as of Expo SDK 57. Its config plugin generates the iOS Share Extension, the App Group and the activation rules, so there's no hand-written Swift in the repository.
+
+Expo marks iOS share-receiving experimental, and the reason matters more than the label. The generated extension doesn't process the payload in its own `ViewController`, which is how a share extension is normally built and what Apple officially supports. It writes the payload into the App Group and opens the main app target. There's no small sheet that appears over Instagram, does its work and vanishes. The share journey happens inside Barklog, with Barklog fully launched.
+
+You design for that rather than hide it. Expo Router's [`redirectSystemPath`](https://docs.expo.dev/router/advanced/native-intent/) returns a path to navigate to and there's no return value meaning "stay where you are", so an incoming share has to land on a route. Barklog's root layout was deliberately a `Slot` with `(tabs)` as the only root route, so a sibling `/shared` would have replaced the tabs instead of presenting over them, unmounting tab state with nowhere to go back to. The root became a `Stack`, and `/shared` is a `fullScreenModal` on top of it.
+
+<Figure caption="On-device sharing flow">
+  <BarklogSharingFlow class="mx-auto" role="img" aria-label="A share sheet in another app hands its payload to Barklog's share extension, which writes it into the App Group. The native-intent handler routes to the /shared route, a full-screen modal, which reads that payload back out of the App Group. The screen then shows a spinner while the payload is still resolving, an empty state if the share held no link, or sends the link to identify and lists candidate games." />
+</Figure>
+
+Two details in there are easy to get wrong. The payload outlives the process, so a share the user already dealt with gets re-presented on the next cold launch unless you clear it. Every path that actually leaves the flow calls `clearSharedPayloads()`. Picking a candidate doesn't, because that pushes deeper in rather than out, and a "wrong pick, go back" should find the share still sitting there.
+
+The other is knowing when nothing's coming. The hook exposes `isResolving`, and emptiness can't stand in for it, because a resolve that finished and produced nothing looks exactly like one that hasn't started yet. Read it as the second and the screen waits forever.
+
+## Two spellings of the same video
+
+Before anything touches the network the URL gets canonicalised. It's unglamorous, and it's the cheapest leverage in the pipeline.
+
+`normalise.ts` drops the fragment, strips `utm_*` and a short list of tracking parameters, sorts what's left so two spellings differing only in query order collide, and rebuilds YouTube and TikTok URLs from their native ids. Every `youtu.be/x`, `youtube.com/shorts/x` and `m.youtube.com/watch?v=x` becomes one string, whose SHA-1 is the `shareId`. That's the cache key for both the metadata and the extraction, so canonicalisation decides how often the expensive parts run at all.
+
+The interesting part is what deliberately isn't stripped. `t`, `ref` and `si` are all common tracking parameters and none of them is on the list:
+
+```ts
+const TRACKING = new Set([
+  "fbclid",
+  "gclid",
+  "igsh",
+  "mc_cid",
+  "mc_eid",
+  "is_from_webapp",
+  "sender_device",
+]);
+```
+
+All three are short and generic enough that some arbitrary page could be using one to select content rather than to track a referrer. `?si=42` might be a size. Collapsing two genuinely different pages onto one `shareId` serves one page's cached answer for the other, which is worse than a duplicate entry and shows up once in a thousand shares with no way to reproduce it. YouTube and TikTok get rebuilt from their ids anyway, so the short list costs nothing on the traffic that matters.
+
+One host skips the pipeline entirely. An `igdb.com/games/<slug>` link identifies a row in the mirror exactly, since IGDB is where the mirror's data came from. No fetch, no model call, no cache entry, just a slug lookup against a table Barklog already owns.
+
+## The ladder
+
+Everything else needs metadata, and there are three places to get it, tried in order.
+
+<Figure caption="Metadata extraction">
+  <BarklogMetadataExtraction class="mx-auto" role="img" aria-label="A normalised URL takes one of three routes. An igdb.com link resolves straight to a row in the mirror. A URL claimed by a vendored oEmbed provider goes to that provider, which either returns a title, author and thumbnail, or fails: 401, 403 and 404 are terminal, while a 5xx or a timeout falls through. A URL no provider claims falls through as well. The fall-through fetches the page as capped HTML and reports its final URL, then retries the provider match, then og:title, then the title element, and answers 422 if none of them yields a title." />
+</Figure>
+
+The rungs fail differently, and flattening that is how you ship something subtly terrible. An oEmbed endpoint answering 401, 403 or 404 is terminal: the video is private or removed, and falling through to scrape the page would faithfully report "Video unavailable" as the title and then hunt for a game by that name. A 5xx, a timeout, or a payload that doesn't match the schema isn't terminal and should fall through. TikTok answers 200 with a blank title for a removed video, which is why the schema puts a `minLength(1)` after `trim`.
+
+Short links need no dedicated step. `safeFetch` reports the URL it ended on, so a `vm.tiktok.com` link resolves through the HTML fetch it was making anyway, and re-running the provider match on the final URL routes it to TikTok's oEmbed endpoint.
+
+[Open Graph](https://ogp.me/) is parsed with [`htmlparser2`](https://github.com/fb55/htmlparser2) driven as a streaming SAX parser, no DOM built, calling `parser.reset()` on `</head>`. A regex over `<meta>` tags gets attribute order and quoting wrong in ways that matter when your input is every website on earth.
+
+## Saying which rung answered
+
+The model at the end of this produces a guess, and guesses have different qualities. A title that literally names a game is a different claim from "this channel mostly covers one game, so probably that". The pipeline reports which one it made:
+
+```ts
+export const EXTRACTED_BASES = ["title", "author", "web", "none"] as const;
+export type ShareBasis = (typeof EXTRACTED_BASES)[number] | "unavailable";
+```
+
+That value goes on the wire and drives the header above the results: "Matches for the title", or "Games this channel usually covers", or "Matches from a web search". On `unavailable`, where extraction itself failed and the results are a raw title search, there's no header and an orange notice instead, because a header would claim a match the server explicitly disclaimed.
+
+That last case is the one I'd defend hardest. When extraction fails soft, `guesses` holds the source's raw title rather than anything a model believed, so quoting it back as "we think this is about X" asserts a belief nothing in the system holds. The empty state gates on `basis` for that reason, not on `guesses` being non-empty. A guess labelled "based on the video title" is honest. The same guess unlabelled isn't.
+
+## 332 endpoints in a file
+
+[oEmbed](https://oembed.com/) has a registry at [`oembed.com/providers.json`](https://oembed.com/providers.json) listing several hundred sites that'll hand you a title and an author for free, no key and no quota. Barklog doesn't fetch it. A script does, and writes `providers.generated.ts`: 57KB of vendored data committed to the repository.
+
+Fetching it at runtime would put a third-party JSON file on the request path, which is both a cold-start dependency and a place to be compromised from. That endpoint list is effectively the outbound allowlist for the oEmbed rung, and I'd rather it change in a reviewed diff than silently at 3 a.m.
+
+Matching is where the trap is. Schemes are glob-ish, like `https://*.youtube.com/watch*`, and the obvious compilation turns each `*` into `.*`:
+
+```ts
+const body = anchored
+  .split("*")
+  .map((literal) => literal.replace(REGEXP_SPECIAL, "\\$&"))
+  .join("[^/\\\\]*");
+```
+
+A wildcard that can match `/` lets `https://evil.com/x.youtube.com/watch?v=1` satisfy YouTube's scheme, because `.*` swallows `evil.com/x` and picks up the rest on the far side of the slash. Excluding `/` fixes that. Excluding `\` too is the part I wouldn't have thought of unaided: [WHATWG URL](https://url.spec.whatwg.org/#path-state) treats a backslash as a path separator for `https:`, so `https://evil.com\x.youtube.com/watch` parses to host `evil.com`, and a class that only excluded `/` would let the wildcard cross that separator as well. There's a test for that exact string.
+
+## "THIS CHANGES EVERYTHING"
+
+The first version of this pipeline accepted YouTube and TikTok and refused everything else. The design document that replaced it says why that was wrong in one sentence I keep coming back to: the two-provider limit "is not a product decision that was made; it is the shape the first implementation happened to take".
+
+Two failures made it untenable. An IGN review or a Vimeo upload came back `UNPROCESSABLE_SHARE`, and the share sheet couldn't know that before the round trip. And the model only ever saw a title and an author, which breaks on a very common case:
+
+> When a video is called "THIS CHANGES EVERYTHING" on a channel nobody has heard of, there is nothing in the input to work with, and the answer is `none` — even though the link itself, handed to a search engine, would settle it in one query.
+
+So extraction became two passes against [OpenAI's API](https://platform.openai.com/docs/api-reference/responses), on `gpt-5.4-mini` by default. Pass one gets the title, the author and the site, no tools, reasoning effort `none`, and picks a tier: `title` if the title names or implies a game, `author` if it recognises the channel and knows what it covers, `none` otherwise. Only on `none` does pass two run, with the URL included and a web search tool attached.
+
+The gate exists because of arithmetic. A search bills at $10 per 1000 calls plus roughly 8k input tokens, about $0.016 against $0.0002 for pass one, so roughly eighty times the price. Every YouTube link keeps the cost profile it already had, and only the links that actually stumped the cheap path pay for the expensive one. A pass-two failure throws instead of degrading to pass one's `none`, because a throw propagates uncached and returning that `none` would pin a dead end in the cache for 30 days.
+
+Pass one deliberately doesn't see the URL. A slug is free signal, but a page with a usable slug has a title carrying the same words, and handing pass one the URL would blur the `title` tier into "title or URL", which isn't what the header promises.
+
+## The part most hackathon apps skip
+
+Opening the endpoint to any link deleted a sentence I liked: "we only ever talk to four hostnames". What replaces a host allowlist is the only genuinely dangerous thing in this project.
+
+A server that fetches URLs strangers hand it is a [server-side request forgery](https://owasp.org/www-community/attacks/Server_Side_Request_Forgery) risk. Your API almost certainly sits inside a private network: cloud metadata at `169.254.169.254`, a Postgres on `10.x`, an admin panel bound to loopback, a Redis with no password because it's "internal". If somebody can make your server issue a GET, they reach all of that from inside your perimeter, and your app helpfully reads back whatever comes out of it as a page title.
+
+The replacement rule is that Barklog only ever talks to public unicast addresses, over https, on port 443, following at most three redirects, reading at most 512KB, inside a total budget of 8 seconds.
+
+<Figure caption="Safe fetch flow">
+  <BarklogSafeFetch class="mx-auto" role="img" aria-label="A URL is refused unless it is https on port 443 with no credentials in the authority. Its hostname is resolved and every returned address is checked, and any address outside public unicast is blocked. The checked address is pinned into the request's own connector, and the request runs with automatic redirects disabled, a five second per-hop timeout and an eight second total budget. Up to three redirects re-enter the whole flow from the top, a content-type that is not exactly allowed is refused, and the body is read up to a cap, truncating HTML and refusing oversized JSON." />
+</Figure>
+
+The pinning is what matters most. Checking an address and then calling `fetch(hostname)` is the version everybody writes, and it doesn't work: the connector re-resolves the hostname at connect time. An attacker running their own DNS server answers with a public address for your check and a private one a moment later for your connection. That's [DNS rebinding](https://en.wikipedia.org/wiki/DNS_rebinding). The fix is to make the check binding rather than advisory, by connecting to the address you already verified:
+
+```ts
+function createPinnedDispatcher(address: string, family: 4 | 6): Agent {
+  return new Agent({
+    connect: {
+      lookup: (_hostname, lookupOptions, callback) => {
+        if (lookupOptions.all === true) {
+          callback(null, [{ address, family }]);
+        } else {
+          callback(null, address, family);
+        }
+      },
+    },
+  });
+}
+```
+
+Everything else follows from taking that seriously. Every address a resolver returns gets checked, not just the first, because a resolver answering with one public and one private address mustn't be usable by picking the private one. Redirects are manual and every hop re-enters the whole check, since a redirect to an internal address is the cheapest bypass there is. Ports other than 443 are refused. That does refuse legitimate `https://host:8443/` links, deliberately: arbitrary ports turn the endpoint into an internal port scanner.
+
+The address policy is worth reading if you ever write one. IPv4 is the familiar table. IPv6 is where people get it wrong, and the trap that gets forgotten is that `::ffff:127.0.0.1` is loopback wearing an IPv6 hat, so mapped forms have to be unwrapped and re-checked against the IPv4 rules. Two carve-outs landed after review: `2001::/23`, the IETF protocol assignments block where Teredo and benchmarking and AS112 live, none of them an ordinary destination; and `3ffe::/16`, the former 6bone, [returned to IANA](https://www.rfc-editor.org/rfc/rfc3701) and never reallocated, so a route to it means somebody's routing reserved space internally.
+
+The reviewer suggested driving that off the [IANA special-purpose address registry](https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml) instead. I didn't, for a reason that generalises: the table churns as new blocks are delegated, and a stale copy fails by refusing legitimate sites, which is worse than the narrow gap it shuts.
+
+One more, small and easy to get wrong. The content-type check compares the MIME essence exactly:
+
+```ts
+function mimeEssence(header: string): string {
+  return header.split(";", 1)[0]!.trim().toLowerCase();
+}
+```
+
+The original was `includes("application/json")`, which also accepts `application/jsonp`, and accepts any type at all that merely names an allowed one in a parameter. A content-type header has structure, and matching it by substring throws that structure away.
+
+The body cap had a wrinkle I didn't anticipate. Refusing an oversized body is right for JSON, where a truncated document isn't a document. It's wrong for HTML, where the metadata sits in the first 20KB and the tail is inlined application script. An Instagram reel is about 745KB in one document, and refusing it turned a perfectly readable page into a 502. HTML truncates now, JSON still refuses, and the read stops at the cap either way, so memory stays bounded.
+
+## The wait, and the thumbnail
+
+While identification runs, the screen shows the dog mascot with a spinner and the line "Working out which game this is", because a request that makes an outbound fetch and a model call deserves an honest wait rather than a skeleton pretending to be fast.
+
+The source preview sizes its thumbnail from the dimensions the provider reported, clamped, with the height fixed and the width left to Yoga's `aspectRatio`. A bare height gives a zero-width view: layout runs before the image decodes, and [`expo-image`](https://docs.expo.dev/versions/v57.0.0/sdk/image/) fills the box it's handed rather than reporting a size back into layout.
+
+## What transfers
+
+If you take one thing from this, take the pinning. Anything that accepts a URL and fetches it has this exact problem: a link preview, an avatar-by-URL field, a webhook tester, an RSS reader. The check-then-fetch version looks correct and isn't. The rest is the same instinct further down. Canonicalise before you cache, so the key means something. Let each rung fail in the way that's true of it instead of uniformly. Tell the user which rung answered. Put the expensive call behind a gate that only opens once the cheap one has given up.
+
+Part 3 is the free tier: where the cap is enforced, and what happens when a purchase and a webhook race each other. Part 4 is App Review.
+
+Every design document behind this post is in [the repository](https://github.com/chornonoh-vova/barklog) under `docs/`, including the one admitting the two-provider limit was never a decision. And if you've shared a link into Barklog and it got the game wrong, I'd like that link. The failures I can reproduce are the ones I can fix.

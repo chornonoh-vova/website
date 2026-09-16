@@ -34,3 +34,17 @@ export function getReadingTime(text: string | undefined): string | undefined {
     return undefined;
   }
 }
+
+/**
+ * Every post in a series, drafts included, ordered by part number. Drafts are
+ * kept deliberately: an unwritten part still belongs in the series nav.
+ */
+export async function seriesParts(name: string) {
+  const parts = (await getCollection("blog")).filter(
+    (post) => post.data.series?.name === name,
+  );
+
+  parts.sort((a, b) => (a.data.series?.part ?? 0) - (b.data.series?.part ?? 0));
+
+  return parts;
+}
