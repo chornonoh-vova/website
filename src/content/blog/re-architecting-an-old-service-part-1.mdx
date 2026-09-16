@@ -2,6 +2,10 @@
 title: "Re-architecting an old service: Part 1"
 description: "Replacing an aging Java proxy with a Python subprocess, without touching the callers"
 date: 2026-05-26
+series:
+  name: "Re-architecting an old service"
+  part: 1
+  label: "Replacing the proxy"
 ---
 
 import Figure from "../../components/Figure.astro";
@@ -10,8 +14,6 @@ import ProxyServiceArchitecture from "../../assets/images/proxy-service-architec
 import ProxyManagerImpl from "../../assets/images/proxy-manager-impl.svg";
 import ProxyManagerFactoryImpl from "../../assets/images/proxy-manager-factory-impl.svg";
 import ProxyImplResolution from "../../assets/images/proxy-impl-resolution.svg";
-
-> This post is part 1 of the miniseries. Read part 2 [here](/blog/re-architecting-an-old-service-part-2).
 
 Every distributed system has a component that everyone quietly dreads touching. Ours was the proxy service.
 

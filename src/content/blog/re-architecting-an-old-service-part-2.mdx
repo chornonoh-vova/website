@@ -2,9 +2,11 @@
 title: "Re-architecting an old service: Part 2"
 description: "How I structured a multi-PR migration for AI delegation, and what actually made it work"
 date: 2026-06-05
+series:
+  name: "Re-architecting an old service"
+  part: 2
+  label: "The multi-PR migration"
 ---
-
-> This post is part 2 of the miniseries. Read part 1 [here](/blog/re-architecting-an-old-service-part-1).
 
 Porting [BrowserUp Proxy](https://github.com/browserup/browserup-proxy)'s feature set to [mitmproxy](https://github.com/mitmproxy/mitmproxy) meant porting more than a dozen distinct behaviors. Header injection. Basic and NTLM authentication. PDF handling. Cookie management. Content filtering. Debug capture. Each had edge cases, tests, and a reference implementation in Java on one side, with new Python addons needed on the other. Done serially, this was many weeks of work.
 
