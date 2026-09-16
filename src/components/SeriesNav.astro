@@ -21,7 +21,7 @@ const currentPart = parts.find((part) => part.id === current)?.data.series?.part
     <span class="font-medium">{name}</span>
     {
       currentPart !== undefined && (
-        <span class="text-black/60 dark:text-white/60">
+        <span class="opacity-60">
           Part {currentPart} of {parts.length}
         </span>
       )
@@ -31,35 +31,25 @@ const currentPart = parts.find((part) => part.id === current)?.data.series?.part
   <ol class="list-none space-y-1.5 ps-0">
     {
       parts.map((part) => {
-        const label = part.data.series?.label ?? part.data.title;
-        const number = part.data.series?.part;
-
-        if (part.data.draft) {
-          return (
-            <li class="text-black/50 dark:text-white/50">
-              {number}. {label}{" "}
-              <span class="italic">(not published yet)</span>
-            </li>
-          );
-        }
-
-        if (part.id === current) {
-          return (
-            <li class="font-medium" aria-current="page">
-              {number}. {label}{" "}
-              <span class="font-normal text-black/60 dark:text-white/60">
-                (you are here)
-              </span>
-            </li>
-          );
-        }
+        const series = part.data.series!;
+        const label = series.label ?? part.data.title;
+        const isCurrent = part.id === current;
 
         return (
-          <li>
-            {number}.{" "}
-            <Link href={`/blog/${part.id}/`} underline>
-              {label}
-            </Link>
+          <li
+            class:list={[part.data.draft && "opacity-50", isCurrent && "font-medium"]}
+            aria-current={isCurrent ? "page" : undefined}
+          >
+            {series.part}.{" "}
+            {part.data.draft || isCurrent ? (
+              label
+            ) : (
+              <Link href={`/blog/${part.id}/`} underline>
+                {label}
+              </Link>
+            )}
+            {part.data.draft && <span class="italic"> (not published yet)</span>}
+            {isCurrent && <span class="font-normal opacity-60"> (you are here)</span>}
           </li>
         );
       })

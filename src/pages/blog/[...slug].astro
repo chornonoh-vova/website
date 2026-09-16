@@ -9,6 +9,7 @@ import FormattedDate from "../../components/FormattedDate.astro";
 import PostComments from "../../components/PostComments.astro";
 import NewsletterSubscribe from "../../components/NewsletterSubscribe.astro";
 import Link from "../../components/Link.astro";
+import SeriesNav from "../../components/SeriesNav.astro";
 
 export const getStaticPaths = (async () => {
   const allPosts = await allBlogPosts();
@@ -79,6 +80,12 @@ const { Content, ...components } = await render(post);
     </div>
 
     <hr class="mt-5 mb-5 md:mt-0" />
+
+    {
+      post.data.series && (
+        <SeriesNav name={post.data.series.name} current={post.id} />
+      )
+    }
 
     <Content components={{ ...components, a: ExternalLink }} />
 

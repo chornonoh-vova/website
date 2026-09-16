@@ -44,7 +44,7 @@ export async function seriesParts(name: string) {
     (post) => post.data.series?.name === name,
   );
 
-  parts.sort((a, b) => (a.data.series?.part ?? 0) - (b.data.series?.part ?? 0));
+  parts.sort((a, b) => a.data.series!.part - b.data.series!.part);
 
   return parts;
 }
