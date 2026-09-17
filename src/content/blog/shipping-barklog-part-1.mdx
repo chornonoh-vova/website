@@ -82,7 +82,23 @@ This sounds like more work than it is. 374,000 games is about 748 requests at IG
 
 There's a second-order benefit that mattered more than I expected. Once the data is local, search is just SQL, and you can rank it however you like. If you're proxying a third-party API you get their ranking and their filters and you build around them.
 
-The part I'd steal for other projects is how the boundary is enforced. `apps/api` has no IGDB client anywhere in its dependency graph. Not "we agreed not to call IGDB from the API" — the package simply isn't installed there. The design can't quietly regress into a live proxy under deadline pressure, because regressing means someone adds a dependency on purpose, in a diff, with their name on it. Conventions rot. Manifests don't.
+The part I'd steal for other projects is how the boundary is enforced. `apps/api` has no IGDB client anywhere in its dependency graph. Not "we agreed not to call IGDB from the API" — the package simply isn't installed there. The whole mechanism is two dependency lists:
+
+```jsonc
+// apps/worker/package.json
+"@repo/cache": "workspace:*",
+"@repo/db": "workspace:*",
+"@repo/igdb": "workspace:*",
+"@repo/logging": "workspace:*",
+
+// apps/api/package.json
+"@repo/cache": "workspace:*",
+"@repo/contracts": "workspace:*",
+"@repo/db": "workspace:*",
+"@repo/logging": "workspace:*",
+```
+
+`@repo/igdb` is in one and not the other, and that missing line is the entire rule. The design can't quietly regress into a live proxy under deadline pressure, because regressing means someone adds a dependency on purpose, in a diff, with their name on it. Conventions rot. Manifests don't.
 
 ## Failure is a no-op
 
@@ -90,7 +106,49 @@ The sync worker has no error recovery path, and that's the design rather than an
 
 A run takes an advisory lock, reads a watermark from the last successful run, pages through everything IGDB has changed since then, and writes each page in a transaction. If a run fails, it's marked failed and the watermark doesn't advance. The next run re-fetches the same range.
 
-That works because every write is an upsert and the join rows for a page get replaced wholesale, so replaying a range that partly succeeded produces the same database as replaying one that wholly failed. Re-running is always safe.
+"The watermark doesn't advance" is one `WHERE` clause:
+
+```ts
+/** Overlap the watermark: IGDB's `updated_at` is second-resolution, so an
+ * exact boundary can drop rows. */
+export const WATERMARK_OVERLAP_MS = 60_000;
+
+export async function getWatermark(db: Queryable): Promise<Date | null> {
+  const [row] = await db
+    .select({ watermark: syncRuns.watermark })
+    .from(syncRuns)
+    .where(eq(syncRuns.status, "success"))
+    .orderBy(desc(syncRuns.finishedAt))
+    .limit(1);
+
+  if (!row?.watermark) return null;
+
+  return new Date(row.watermark.getTime() - WATERMARK_OVERLAP_MS);
+}
+```
+
+A failed run writes `status: "failed"` and an error message, and never a watermark. Nothing handles that case, because a failed run simply never matches this query.
+
+The minute of overlap is there because IGDB's `updated_at` has second resolution, so using the watermark as an exact boundary drops anything written in the same second as the last row you saw. That means every run deliberately re-fetches a minute of work it already has, which is only free because replaying a page changes nothing:
+
+```ts
+/**
+ * Reference rows go first so nothing references a missing parent, and join rows
+ * are replaced wholesale so anything IGDB dropped disappears. Every write is an
+ * upsert or a scoped replace, which is what makes replaying a page a no-op.
+ */
+export async function persistPage(db: Db, page: MappedPage): Promise<void> {
+  // ... upsert game types, genres, platforms, companies, then the games
+  await tx.delete(schema.gameScreenshots).where(inArray(schema.gameScreenshots.gameId, gameIds));
+  await tx.delete(schema.gameGenres).where(inArray(schema.gameGenres.gameId, gameIds));
+  await tx.delete(schema.gamePlatforms).where(inArray(schema.gamePlatforms.gameId, gameIds));
+  // ... then insert this page's join rows for the same ids
+}
+```
+
+Every delete is scoped to the ids in the page. That's what makes the replace safe to repeat, and it's also the only way a genre IGDB removed from a game ever disappears from the mirror: an upsert alone would leave the old join row sitting there forever.
+
+Replaying a range that partly succeeded produces the same database as replaying one that wholly failed. Re-running is always safe.
 
 The line in the design document I keep coming back to: there is no repair path to write, because there is no partial state to repair. Most of the operational pain I've had in my career has come from systems where a half-finished job leaves something that is neither the old state nor the new one, and somebody has to write a script to reconcile it, usually at a bad hour. You can design that category of problem out. It costs a watermark and a discipline about idempotent writes.
 
@@ -98,7 +156,31 @@ The line in the design document I keep coming back to: there is no repair path t
 
 The whole API is authenticated. The exceptions are the two health checks and the two webhook endpoints, one for Clerk and one for RevenueCat, which prove themselves with a signature instead of a token. There's no public read path, no browse-without-an-account mode, and the root of the app is a sign-in view you can't dismiss.
 
-For a backlog tracker that sounds heavy-handed, and it's the decision I'd defend fastest, because of what it deletes. An app with an anonymous mode has two of everything: two versions of most screens, two sets of empty states, a migration path for the moment an anonymous user signs up and wants their existing data to follow them, and a permanent question at the top of every new feature about whether logged-out users get it. None of that exists here. There's one state, and every screen gets to assume a user.
+The exceptions are a `Set`, and the check is an exact match rather than a prefix:
+
+```ts
+export function requireAuth(authenticate: Authenticator): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    // By exact path: a prefix allowlist would quietly make a future
+    // `/healthz-debug` public.
+    if (PUBLIC_PATHS.has(c.req.path)) return next();
+
+    const userId = await authenticate(c);
+    if (!userId) {
+      throw problems.create("UNAUTHORIZED", {
+        detail: "A valid session token is required.",
+      });
+    }
+
+    c.set("userId", userId);
+    await next();
+  };
+}
+```
+
+The comment is the part I'd keep. `startsWith` over a prefix list is what I'd have written without thinking about it, and it means the day somebody adds `/healthz-debug` the route is public before anyone reviews it.
+
+For a backlog tracker all this sounds heavy-handed, and it's the decision I'd defend fastest, because of what it deletes. An app with an anonymous mode has two of everything: two versions of most screens, two sets of empty states, a migration path for the moment an anonymous user signs up and wants their existing data to follow them, and a permanent question at the top of every new feature about whether logged-out users get it. None of that exists here. There's one state, and every screen gets to assume a user.
 
 The part worth stealing is how the API checks that user. Clerk issues a JWT, and the API verifies it against Clerk's published signing keys, which it fetches and caches. A request arrives, gets verified locally, and proceeds. Clerk isn't in the request path.
 
@@ -125,13 +207,60 @@ That second term is popularity, and it's what stops `mario` returning an obscure
 
 Neither half works alone. Pure relevance surfaces trivia, pure popularity surfaces the same twenty games for every query.
 
+One wrinkle isn't visible in the `ORDER BY`. The cutoff `word_similarity` uses is a GUC, `pg_trgm.word_similarity_threshold`, and a connection pool means setting it globally leaks it into whatever query runs next on that connection. So the search opens a transaction and sets it with `SET LOCAL`, which reverts on commit:
+
+```ts
+return db.transaction(async (tx) => {
+  // `SET LOCAL` takes no bind parameter, so this is string-built — safe only
+  // because the threshold is a module constant, never caller-supplied.
+  await tx.execute(
+    sql.raw(`SET LOCAL pg_trgm.word_similarity_threshold = ${WORD_SIMILARITY_THRESHOLD}`),
+  );
+
+  return tx.select(GAME_SUMMARY_COLUMNS).from(games).where(sql`${query} <% ${games.name}`);
+  // ... ordering, limit, offset
+});
+```
+
+A setting that can't take a bind parameter has to be interpolated, and interpolation is where injection lives, so the value being a module constant is load-bearing rather than incidental.
+
 ## The cache can't take the site down
 
 Two rules, and the second one is the one I'd argue for anywhere.
 
-Invalidation is a version bump. Search results are stored under a key that includes a counter, and when the nightly sync finishes it increments the counter. Every key from the previous version becomes unreachable in one operation and expires on its own schedule. No key scanning, no delete lists, no invalidation logic that can be wrong for one code path and right for the others. The class of bug where stale data survives because somebody forgot a cache-clear call doesn't have anywhere to live.
+Invalidation is a version bump. Search results are stored under a key that includes a counter:
 
-The cache is fail-open. If Valkey is unreachable, the wrapper logs it and the caller goes to Postgres. The site gets slower. It doesn't get an error page. A cache holds nothing that can't be recomputed, so a cache should never be able to take a service down, and that only holds if you write the fallback path on the first day rather than after the first incident.
+```ts
+export function searchKey(version: number, query: string, limit: number, offset: number): string {
+  return `search:v${version}:${sha1(`${query}|${limit}|${offset}`)}`;
+}
+```
+
+and the last thing a successful sync does is increment it:
+
+```ts
+await finishRun(deps.db, runId, { watermark, counts });
+
+// Only after a successful run: this orphans every cached search at once.
+await deps.cache.incr(SEARCH_VERSION_KEY);
+```
+
+Every key from the previous version becomes unreachable in one operation and expires on its own schedule. No key scanning, no delete lists, no invalidation logic that can be wrong for one code path and right for the others. The class of bug where stale data survives because somebody forgot a cache-clear call doesn't have anywhere to live.
+
+The cache is fail-open, and that's about ten lines:
+
+```ts
+async function failOpen<T>(operation: () => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    log.warning("degraded: {message}", { message: (error as Error).message });
+    return fallback;
+  }
+}
+```
+
+Every method on the client goes through it, with the fallback that means "we know nothing": `null` for a read, `undefined` for a write, `false` for a ping. A read that fails is indistinguishable from a miss, so the caller goes to Postgres without knowing anything happened. The site gets slower. It doesn't get an error page. A cache holds nothing that can't be recomputed, so a cache should never be able to take a service down, and that only holds if you write the fallback path on the first day rather than after the first incident.
 
 Game details are deliberately not cached at all, which surprised me when I decided it. The response varies per user, and the read underneath is a few indexed joins. Caching it would have added an invalidation problem in exchange for almost nothing.
 
@@ -143,7 +272,33 @@ The mobile app draws its lists with React Native and its controls with SwiftUI t
 
 What stops the result from looking like two applications stitched together is colour. Every React Native colour comes from [`PlatformColor`](https://reactnative.dev/docs/platformcolor), which resolves the same iOS dynamic system colours the SwiftUI controls are already using. Light mode, dark mode, no `useColorScheme` branch to keep in sync, no palette to drift.
 
-The decision I'd defend hardest is that this rule got written down once, as a table, before any screen existed. A hybrid UI without a written rule becomes a per-component argument you have fifty times, and you lose it slightly differently each time.
+The whole palette is one file, and it has a single hard-coded colour in it:
+
+```ts
+/** The brand tint, and the only hex literal in the app: every other colour comes
+ * from `PlatformColor` so both halves resolve the same iOS dynamic colours. */
+export const Brand = {
+  tint: "#208AEF",
+} as const;
+
+export const Screen = {
+  fill: { flex: 1, backgroundColor: PlatformColor("systemBackground") },
+  listContent: { flexGrow: 1 },
+} as const;
+```
+
+That tint is fed to `Host seedColor` and propagates through the SwiftUI environment, so the one colour I picked myself reaches both halves the same way.
+
+The decision I'd defend hardest is that this rule got written down once, as a table, before any screen existed:
+
+| Concern                                              | Built with                                                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Lists, rows, scroll containers, images, text content | React Native: `SectionList`, `FlatList`, `ScrollView`, `Pressable`, `expo-image` |
+| Controls                                             | `@expo/ui/swift-ui` inside a `Host`: `Button`, `Menu`, `Picker`                  |
+| Native state views                                   | `ContentUnavailableView`, `ProgressView`                                          |
+| SF Symbols on the RN side                            | `expo-symbols` `SymbolView`                                                      |
+
+Every "should this one be SwiftUI?" after that was a lookup rather than a discussion. A hybrid UI without a written rule becomes a per-component argument you have fifty times, and you lose it slightly differently each time.
 
 ## What it cost
 
@@ -157,6 +312,6 @@ A wrong document costs more than wrong code. Wrong code fails a test, or fails r
 
 The speed of an agent-assisted build isn't really speed at typing. It moves the expensive part upstream, into deciding what should exist, and it punishes vagueness much harder than a normal project does, because vagueness gets built. Every architectural choice above is a decision that was cheap to make in a paragraph and would have been costly to discover in code: keeping IGDB out of the request path, making failure a no-op, refusing to have anonymous users at all, ranking search on two terms instead of one, letting the cache fail open, drawing the hybrid UI line once.
 
-[Part 2](/blog/shipping-barklog-part-2/) is the share pipeline, and the problem of turning an arbitrary link somebody sent you into a specific game. Part 3 is the free tier: where the cap is enforced, and what happens when a purchase and a webhook race each other. Part 4 is App Review, and the parts of shipping an app that an agent couldn't do for me.
+[Part 2](/blog/shipping-barklog-part-2/) is the share pipeline, and the problem of turning an arbitrary link somebody sent you into a specific game. [Part 3](/blog/shipping-barklog-part-3/) is the free tier: where the cap is enforced, and what happens when a purchase and a webhook race each other. Part 4 is App Review, and the parts of shipping an app that an agent couldn't do for me.
 
 One thing I'd like an opinion on, if you have one. The free tier caps you at 10 unfinished games, meaning `waiting` or `playing`, and finishing one gives the slot back. Completed and abandoned games are unlimited. I'm honestly not sure ten is right rather than merely defensible. If you've used it: is 10 too tight? If the answer comes back clearly one way, I'll ship the change. I'm posting about this under #Shipaton on LinkedIn, and every design document quoted above is in [the repository](https://github.com/chornonoh-vova/barklog) under `docs/`, rejected alternatives and all.
