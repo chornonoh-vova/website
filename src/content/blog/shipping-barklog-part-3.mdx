@@ -9,10 +9,6 @@ series:
   label: "The free tier"
 ---
 
-import SeriesNav from "../../components/SeriesNav.astro";
-
-<SeriesNav name="Shipping Barklog" current="shipping-barklog-part-3" />
-
 Every free tier you've used works the same way. You get some number of the thing, and when you want more than that number, you pay. The number is round, the app shows you where you stand against it, and nobody needs the rule explained twice.
 
 Barklog has one of those. The number is ten.
@@ -59,6 +55,10 @@ Checking against the total looks fine until you sit at ten of ten and try to fin
 
 `slotDelta` answers the only question there is: whether this transition consumes a slot, gives one back, or does neither. Everything downstream reads `delta > 0` and stops thinking about statuses. A rating change on a game you're already playing comes back zero, so it never touches the subscription table at all.
 
+Cancellation is the case that pushes hardest on this. Somebody subscribes, collects twenty unfinished games, then lets the subscription lapse. They are now ten over a cap of ten, in a state the free tier was never meant to produce. Because the check only runs when `delta > 0` there is nothing to decide: the twenty games stay, any of them can still be finished, abandoned or re-rated, and only the twenty-first is refused. Each finish hands a slot back until they are under again. A cap on the total has to answer a much worse question here, and the answers available are deleting rows, hiding them, or locking the app until somebody pays.
+
+The refusal does have to say something true, though. "Finish one to free a spot" is correct at ten and a lie at twenty, so the message counts the real distance back to the cap.
+
 The function lives in `packages/contracts`, which the API and the app both already depend on, so the rule has one declaration and the client's optimistic check can't drift from the server's enforcement. It deliberately isn't in `packages/db`, where `@repo/contracts` is a devDependency rather than a runtime one. Same instinct as part 1's rule about IGDB: the boundary holds because crossing it means editing a manifest in a reviewed diff.
 
 ## Where the rule has to live
@@ -94,7 +94,7 @@ v
 write -> COMMIT -> 201
 ```
 
-The route opens the transaction, and its first statement is a `SELECT ... FOR UPDATE` on the user's own row. It reads nothing anybody wants. It's there so a second write for the same user waits at that line until the first one commits, which turns two racing requests into two sequential ones.
+The route opens the transaction, and its first statement is a [`SELECT ... FOR UPDATE`](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS) on the user's own row. It reads nothing anybody wants. It's there so a second write for the same user waits at that line until the first one commits, which turns two racing requests into two sequential ones.
 
 The comment in the route names the assumption it rests on, and that habit is worth stealing:
 
@@ -107,11 +107,13 @@ The comment in the route names the assumption it rests on, and that habit is wor
 // stop holding.
 ```
 
-Locking is half of it. The loser also has to see the winner's row once the wait ends, and whether it does is a property of the isolation level rather than of the lock. Raising isolation, which almost everyone assumes makes concurrency safer, is what breaks this one. A maintainer who flips that default now has a fighting chance of noticing.
+Locking is half of it. The loser also has to see the winner's row once the wait ends, and whether it does is a property of the [isolation level](https://www.postgresql.org/docs/current/transaction-iso.html) rather than of the lock. Raising isolation, which almost everyone assumes makes concurrency safer, is what breaks this one. A maintainer who flips that default now has a fighting chance of noticing.
 
 Two smaller decisions came out of the same reasoning. `lockUser` throws when it locks no row, since `FOR UPDATE` over zero rows locks nothing and raises nothing, so a missing user would buy you no serialisation and no signal that you'd got none. And `countBacklogEntriesByStatus` returns zero for an empty status list: a silent "count everything" would uncap the free tier.
 
 Nothing in the transaction reaches outside Postgres. The entitlement answer comes from a row that's already local, so the lock is held across a handful of indexed queries and never across a network call to a payment provider. A refusal returns `{ blocked: true }` having written nothing, and the route turns that into a 402 carrying `activeCount` and `limit` as extensions, so the client can render the number without a second question.
+
+402 is underrated. The spec [reserves it for future use](https://www.rfc-editor.org/rfc/rfc9110#name-402-payment-required) and never defines it, [MDN calls it nonstandard](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/402), and no browser does anything with it beyond rendering a generic 4xx. For a JSON API none of that is a problem, and what is left is a code nobody else has claimed. 403 says you will never be allowed. 429 says try again later. 402 says there is a price, which is neither of those, and it lets the client branch on a number instead of parsing a sentence.
 
 One honest note, because the design document keeps it and I'd rather not quietly drop it. During implementation that concurrency test failed once in forty-four runs, reporting two winners where one is required, and never reproduced across forty-three later runs with fresh containers. An audit found no path where the lock isn't held across the count and the write. If it's real, the cost is that somebody occasionally holds eleven unfinished games, which is invisible and non-destructive, and the throw in `lockUser` turns the whole "the lock wasn't held" class from silent into loud.
 
@@ -119,9 +121,9 @@ One honest note, because the design document keeps it and I'd rather not quietly
 
 Part 1 spends most of its argument keeping other people's servers out of the request path. IGDB gets copied into Postgres nightly. Clerk's tokens are verified against cached signing keys. Neither is something a user waits for.
 
-RevenueCat is the same question with the opposite answer. A purchase is a fact created by Apple, relayed by RevenueCat, about money. There's no nightly copy to take, and the last known value isn't good enough, because the entire point of the premium row is that it just changed. Truth has to arrive from outside.
+[RevenueCat](https://www.revenuecat.com/) is the same question with the opposite answer. A purchase is a fact created by Apple, relayed by RevenueCat, about money. There's no nightly copy to take, and the last known value isn't good enough, because the entire point of the premium row is that it just changed. Truth has to arrive from outside.
 
-It arrives two ways, and that's the design rather than a redundancy bolted on later. RevenueCat posts events to `/webhooks/revenuecat`, one of the few routes that isn't behind a session token, which proves itself with a shared secret plus an HMAC over `X-RevenueCat-Webhook-Signature`. Separately, the app can ask the API to go and look: `POST /api/subscription/refresh` calls `https://api.revenuecat.com/v1/subscribers/{app_user_id}` with the secret key and writes what it finds. Both paths end at the same table through the same upsert. The refresh gets its own rate-limit scope of ten a minute, since it's the only route that reaches a third party while somebody waits.
+It arrives two ways, and that's the design rather than a redundancy bolted on later. RevenueCat [posts events](https://www.revenuecat.com/docs/integrations/webhooks) to `/webhooks/revenuecat`, one of the few routes that isn't behind a session token, which proves itself with a shared secret plus an HMAC over `X-RevenueCat-Webhook-Signature`. Separately, the app can ask the API to go and look: `POST /api/subscription/refresh` calls `https://api.revenuecat.com/v1/subscribers/{app_user_id}` with the secret key and writes what it finds. Both paths end at the same table through the same upsert. The refresh gets its own rate-limit scope of ten a minute, since it's the only route that reaches a third party while somebody waits.
 
 ## Two routes, no order
 
@@ -169,7 +171,7 @@ It's safe because the two payloads aren't the same kind of thing. A webhook is a
 
 The comparison is `<=` rather than `<`, which the query comments on: a redelivery of the newest event must still apply, because a partial write looks exactly like no write at all.
 
-Idempotency is the other half, and this is the third time the series has landed on the same instinct. Part 1 had a sync worker where a failed run is a no-op, and a Clerk `user.deleted` webhook written to succeed on a user who's already gone. Here the RevenueCat event id is the primary key of the event log, so `ON CONFLICT DO NOTHING` is the entire duplicate check, with no dedupe table and no window to reason about. A second delivery finds the id stored, writes nothing, and answers 200, because anything other than a 2xx tells RevenueCat to retry something that already landed.
+Idempotency is the other half, and this is the third time the series has landed on the same instinct. Part 1 had a sync worker where a failed run is a no-op, and a Clerk `user.deleted` webhook written to succeed on a user who's already gone. Here the RevenueCat event id is the primary key of the event log, so [`ON CONFLICT DO NOTHING`](https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT) is the entire duplicate check, with no dedupe table and no window to reason about. A second delivery finds the id stored, writes nothing, and answers 200, because anything other than a 2xx tells RevenueCat to retry something that already landed.
 
 The ordering inside that transaction surprised me. The event id and the effect it guards commit together. Record the id first and commit it on its own, and a failure in the upsert answers 500, RevenueCat retries, the retry sees a known id, calls itself a duplicate and returns 200. The subscription is never written, the purchase is gone silently, and a log line is the only trace. Rolling both back leaves the retry a genuinely unprocessed event.
 
@@ -200,7 +202,7 @@ The paywall is reached two ways and both are needed. The proactive path runs `sl
 
 It's a route rather than a gate. Nothing is wrapped in a `SubscriptionGate`, because the free tier is meant to be fully usable, and `onDismiss` is a plain `router.back()`. The design document originally called for a `pageSheet`, on the argument that a sheet reads as an offer and a full-screen takeover reads as a wall. It ships as a `fullScreenModal`, the same as the share screen in part 2, because having every modal in the app behave the same way turned out to matter more. What keeps it an offer is that you can close it at any point, which is a property of the route rather than of how it's presented.
 
-The count is never a surprise. The backlog screen already loads its per-status stats, so the free-tier label derives from the same `SLOT_CONSUMING_STATUSES` constant the server counts with, rather than restating "waiting plus playing" somewhere new. It reads "7 of 10 spots used", and at the limit it states the mechanic instead: finish a game to free one. Tapping it opens the paywall. For a subscriber it disappears, and a star in the profile toolbar opens RevenueCat's Customer Center, where Restore Purchases lives for somebody who'll never see the paywall again.
+The count is never a surprise. The backlog screen already loads its per-status stats, so the free-tier label derives from the same `SLOT_CONSUMING_STATUSES` constant the server counts with, rather than restating "waiting plus playing" somewhere new. It reads "7 of 10 spots used", and at the limit it states the mechanic instead: finish a game to free one. Tapping it opens the paywall. For a subscriber it disappears, and a star in the profile toolbar opens RevenueCat's [Customer Center](https://www.revenuecat.com/docs/tools/customer-center), where Restore Purchases lives for somebody who'll never see the paywall again.
 
 The real bug in all of this was four lines. On sign-out the provider called `Purchases.logOut()`, which is correct, except the same path runs on a cold launch when Clerk resolves to signed-out, and at that point the SDK's current user is anonymous. RevenueCat refuses to log out an anonymous user, sensibly, since there's nothing to detach from. The fix reads `if (!Purchases.isAnonymous)`. The state machine had three states, signed in, signed out, and not yet known, and I'd been careful about the third everywhere except the launch where the second and third look identical.
 
