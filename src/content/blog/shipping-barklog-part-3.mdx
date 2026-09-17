@@ -1,12 +1,215 @@
 ---
 title: "Shipping Barklog: Part 3"
-description: "A free tier that taxes hoarding rather than saving, where the cap is enforced, and what happens when a purchase and a webhook race each other"
+description: "A cap on hoarding rather than on saving, enforced in one transaction, and what a server does when a purchase and a webhook arrive with no order between them"
 date: 2026-09-17
-draft: true
+draft: false
 series:
   name: "Shipping Barklog"
   part: 3
   label: "The free tier"
 ---
 
-Not written yet.
+import SeriesNav from "../../components/SeriesNav.astro";
+
+<SeriesNav name="Shipping Barklog" current="shipping-barklog-part-3" />
+
+Every free tier you've used works the same way. You get some number of the thing, and when you want more than that number, you pay. The number is round, the app shows you where you stand against it, and nobody needs the rule explained twice.
+
+Barklog has one of those. The number is ten.
+
+The work went into deciding what the ten counts, because the obvious answer taxes the behaviour the app exists to encourage, and the obvious answer is what I wrote down first. This post is the free tier: the rule, the one place it's enforced, and the thing both earlier posts promised, which is what a server does when a purchase and a webhook reach it with no order between them.
+
+## Ten of what
+
+Part 1 covered the brief I was building against, two sentences from a competition category I couldn't edit, asking for an app judged on how well people can organize, complete, rate and share their games. The first version of the premium design proposed a free tier of ten backlog entries. Total. Add an eleventh game, meet the paywall.
+
+Everybody understands that rule, and it's wrong here for a reason it took me longer than I'd like to see. A backlog entry is never released. You add Hades, you play it, you finish it, and the finished row keeps its slot. The design document's rejected-alternatives section says it plainly: ten total entries "is consumed in the first session and never recovers, because a finished game keeps occupying a slot forever".
+
+Follow that to the user. The cap fills up through saving, which is the gesture the app is built around, so the person most likely to hit it is the person using Barklog correctly. Finishing a game, the act you'd most want to reward, does nothing for them. After the eleventh save every verb in the brief sits behind a wall that doesn't move again.
+
+So the cap counts unfinished games. `waiting` and `playing` occupy a slot. `completed` and `abandoned` are free and unlimited, and moving a game into either of them hands the slot back. You can hold a thousand finished games on a free account. What you can't do for free is hold more than ten things you haven't started.
+
+That's the whole product decision, and it's maybe fifteen lines of difference in the implementation. Part 1's argument was that an agent moves the expensive part of a build out of typing and into deciding. The free tier is the cleanest evidence I have, since almost none of it is code.
+
+Ten is a judgement call rather than a derived number, and I took it on the condition that the count is visible from the first add. A wall you only meet at your eleventh game is the chore the brief penalises.
+
+## The rule is one function
+
+```ts
+/**
+ * The cap applies to this, never to the total: finishing a game
+ * must succeed at 10/10, and reopening one must not.
+ */
+export function slotDelta(
+  from: BacklogStatus | null,
+  to: BacklogStatus,
+): -1 | 0 | 1 {
+  const before = consumesSlot(from);
+  const after = consumesSlot(to);
+
+  if (before === after) return 0;
+
+  return after ? 1 : -1;
+}
+```
+
+Barklog's backlog write is an upsert. One `PUT /api/backlog/:gameId` carries a status and an optional rating, and it either creates an entry or moves an existing one, so the same endpoint can raise the active count, lower it, or leave it where it was. The difference is what the entry was before.
+
+Checking against the total looks fine until you sit at ten of ten and try to finish something. `completed` doesn't consume a slot, so that write lowers the count, but a naive `activeCount >= 10` refuses it, and you've just blocked the one action that would have unblocked the user. The other direction matters as much: moving a completed game back to `playing` at ten of ten has to be refused, and a total-based check that special-cased "completing is always allowed" would wave it through.
+
+`slotDelta` answers the only question there is: whether this transition consumes a slot, gives one back, or does neither. Everything downstream reads `delta > 0` and stops thinking about statuses. A rating change on a game you're already playing comes back zero, so it never touches the subscription table at all.
+
+The function lives in `packages/contracts`, which the API and the app both already depend on, so the rule has one declaration and the client's optimistic check can't drift from the server's enforcement. It deliberately isn't in `packages/db`, where `@repo/contracts` is a devDependency rather than a runtime one. Same instinct as part 1's rule about IGDB: the boundary holds because crossing it means editing a manifest in a reviewed diff.
+
+## Where the rule has to live
+
+A cap is a read followed by a write, which are the two halves of every concurrency bug I've had to explain to somebody. Count nine, decide there's room, write the tenth. Two requests do that at once and both of them count nine.
+
+```txt
+PUT /api/backlog/:gameId
+|
+v
+game in the mirror? -> no -> 404
+|
+v
+BEGIN
+|
+v
+SELECT 1 FROM users WHERE id = $1 FOR UPDATE
+|
+v
+delta = slotDelta(existing status, requested status)
+|
++-- delta <= 0 -> write -> COMMIT -> 200 or 201
+|
+v
+premium? -> yes -> write -> COMMIT -> 200 or 201
+|
+v
+count(waiting, playing) + delta > 10 ?
+|
++-- yes -> ROLLBACK -> 402 { activeCount, limit }
+|
+v
+write -> COMMIT -> 201
+```
+
+The route opens the transaction, and its first statement is a `SELECT ... FOR UPDATE` on the user's own row. It reads nothing anybody wants. It's there so a second write for the same user waits at that line until the first one commits, which turns two racing requests into two sequential ones.
+
+The comment in the route names the assumption it rests on, and that habit is worth stealing:
+
+```ts
+// The cap's whole mechanism, and it rests on READ COMMITTED: the
+// row lock serialises the racers, and the per-statement snapshot
+// means the loser's count below sees the winner's committed
+// insert. Under REPEATABLE READ the count would reuse the pre-lock
+// snapshot, both racers would read 9, and the cap would silently
+// stop holding.
+```
+
+Locking is half of it. The loser also has to see the winner's row once the wait ends, and whether it does is a property of the isolation level rather than of the lock. Raising isolation, which almost everyone assumes makes concurrency safer, is what breaks this one. A maintainer who flips that default now has a fighting chance of noticing.
+
+Two smaller decisions came out of the same reasoning. `lockUser` throws when it locks no row, since `FOR UPDATE` over zero rows locks nothing and raises nothing, so a missing user would buy you no serialisation and no signal that you'd got none. And `countBacklogEntriesByStatus` returns zero for an empty status list: a silent "count everything" would uncap the free tier.
+
+Nothing in the transaction reaches outside Postgres. The entitlement answer comes from a row that's already local, so the lock is held across a handful of indexed queries and never across a network call to a payment provider. A refusal returns `{ blocked: true }` having written nothing, and the route turns that into a 402 carrying `activeCount` and `limit` as extensions, so the client can render the number without a second question.
+
+One honest note, because the design document keeps it and I'd rather not quietly drop it. During implementation that concurrency test failed once in forty-four runs, reporting two winners where one is required, and never reproduced across forty-three later runs with fresh containers. An audit found no path where the lock isn't held across the count and the write. If it's real, the cost is that somebody occasionally holds eleven unfinished games, which is invisible and non-destructive, and the throw in `lockUser` turns the whole "the lock wasn't held" class from silent into loud.
+
+## The one third party that can't be mirrored
+
+Part 1 spends most of its argument keeping other people's servers out of the request path. IGDB gets copied into Postgres nightly. Clerk's tokens are verified against cached signing keys. Neither is something a user waits for.
+
+RevenueCat is the same question with the opposite answer. A purchase is a fact created by Apple, relayed by RevenueCat, about money. There's no nightly copy to take, and the last known value isn't good enough, because the entire point of the premium row is that it just changed. Truth has to arrive from outside.
+
+It arrives two ways, and that's the design rather than a redundancy bolted on later. RevenueCat posts events to `/webhooks/revenuecat`, one of the few routes that isn't behind a session token, which proves itself with a shared secret plus an HMAC over `X-RevenueCat-Webhook-Signature`. Separately, the app can ask the API to go and look: `POST /api/subscription/refresh` calls `https://api.revenuecat.com/v1/subscribers/{app_user_id}` with the secret key and writes what it finds. Both paths end at the same table through the same upsert. The refresh gets its own rate-limit scope of ten a minute, since it's the only route that reaches a third party while somebody waits.
+
+## Two routes, no order
+
+Here's the part both earlier posts promised. A purchase completes on the device. The RevenueCat SDK knows immediately and the server doesn't. Somewhere in the next second a webhook shows up, and in the same second the app asks the server to refresh, from an entitlement listener and from the paywall sheet's own purchase callback. Nothing orders any of it.
+
+```txt
+purchase completes on device
+|
++-- SDK pushes CustomerInfo to the listener
+|   |
+|   v
+|   entitlement actually changed? -> no -> nothing happens
+|   |
+|   v
+|   POST /api/subscription/refresh (2 tries, never rethrows)
+|   |
+|   v
+|   GET /v1/subscribers/<clerk sub>
+|   |
+|   +-- throws -> 502 -> user stays on the free tier
+|   |
+|   v
+|   lastEventAtMs = now  --upsert--> subscriptions
+|
++-- RevenueCat POSTs /webhooks/revenuecat
+    |
+    v
+    secret + HMAC -> bad -> 401 -> RevenueCat retries
+    |
+    v
+    BEGIN
+    |
+    +-- user tombstoned -> store event scrubbed -> 200
+    |
+    +-- event id already stored -> 200, nothing written
+    |
+    v
+    event_timestamp_ms --upsert--> subscriptions
+                                   WHERE stored <= incoming
+```
+
+What makes the race harmless is that neither writer trusts its own arrival time. Every write carries `lastEventAtMs`, and the upsert refuses to apply behind a value already in the row. A webhook stamps the event's own timestamp. The REST pull stamps `Date.now()`, which looks reckless at first, since it means a refresh wins against any webhook it races.
+
+It's safe because the two payloads aren't the same kind of thing. A webhook is a delta, one event describing one transition, and applying an old one over a newer one resurrects a subscription that's already cancelled. The REST read is the subscriber's current state, so it already contains whatever an earlier event would have told us. Stamping it `now` claims it's the freshest answer available, and it is.
+
+The comparison is `<=` rather than `<`, which the query comments on: a redelivery of the newest event must still apply, because a partial write looks exactly like no write at all.
+
+Idempotency is the other half, and this is the third time the series has landed on the same instinct. Part 1 had a sync worker where a failed run is a no-op, and a Clerk `user.deleted` webhook written to succeed on a user who's already gone. Here the RevenueCat event id is the primary key of the event log, so `ON CONFLICT DO NOTHING` is the entire duplicate check, with no dedupe table and no window to reason about. A second delivery finds the id stored, writes nothing, and answers 200, because anything other than a 2xx tells RevenueCat to retry something that already landed.
+
+The ordering inside that transaction surprised me. The event id and the effect it guards commit together. Record the id first and commit it on its own, and a failure in the upsert answers 500, RevenueCat retries, the retry sees a known id, calls itself a duplicate and returns 200. The subscription is never written, the purchase is gone silently, and a log line is the only trace. Rolling both back leaves the retry a genuinely unprocessed event.
+
+Two branches in that transaction I didn't anticipate. Deleting a Barklog account can't cancel an App Store subscription, so renewals keep arriving for an id whose account is gone, and the naive path would recreate the user row and store their identifier in the payload, quietly undoing the deletion. That's checked before the event is recorded, so the row lands already scrubbed. The opposite case is a user with no row at all: somebody can install, sign in, browse with nothing but GETs and buy Premium, and the row the subscription's foreign key needs only gets created on a first write. So the webhook creates it, which is what the mutating-route middleware does anyway.
+
+## The client is never the authority
+
+The app reads entitlement from `GET /api/me`, not from the SDK's `customerInfo`. The API enforces the cap, so the UI has to agree with the enforcer or it ships enabled buttons the server rejects. `customerInfo` is only a signal that something changed.
+
+That makes "unknown" a real state, and it gets handled rather than collapsed. `usePremium()` returns `boolean | undefined`, and the proactive check refuses to guess:
+
+```ts
+export function wouldExceedSlots(input: {
+  premium: boolean | undefined;
+  activeCount: number | undefined;
+  from: BacklogStatus | null;
+  to: BacklogStatus;
+}): boolean {
+  if (input.premium !== false || input.activeCount === undefined)
+    return false;
+  ...
+}
+```
+
+Guessing "free" while `/me` loads would refuse a legitimate add, and guessing it after a 401 during a token refresh would refuse a paying customer outright. The server's 402 is the backstop for both, which is what lets the client be optimistic in the safe direction.
+
+The paywall is reached two ways and both are needed. The proactive path runs `slotDelta` in the status picker and pushes the paywall route instead of mutating, which stops the optimistic update from drawing the game as added and then snapping it back. The defensive path branches on a 402 in the mutation's `onError`, rolls back, pushes the same route and skips the usual alert, since a sheet plus an alert is two dismissals for one event. It catches what the first can't see: a stale count, another device, an older build.
+
+It's a route rather than a gate. Nothing is wrapped in a `SubscriptionGate`, because the free tier is meant to be fully usable, and `onDismiss` is a plain `router.back()`. The design document originally called for a `pageSheet`, on the argument that a sheet reads as an offer and a full-screen takeover reads as a wall. It ships as a `fullScreenModal`, the same as the share screen in part 2, because having every modal in the app behave the same way turned out to matter more. What keeps it an offer is that you can close it at any point, which is a property of the route rather than of how it's presented.
+
+The count is never a surprise. The backlog screen already loads its per-status stats, so the free-tier label derives from the same `SLOT_CONSUMING_STATUSES` constant the server counts with, rather than restating "waiting plus playing" somewhere new. It reads "7 of 10 spots used", and at the limit it states the mechanic instead: finish a game to free one. Tapping it opens the paywall. For a subscriber it disappears, and a star in the profile toolbar opens RevenueCat's Customer Center, where Restore Purchases lives for somebody who'll never see the paywall again.
+
+The real bug in all of this was four lines. On sign-out the provider called `Purchases.logOut()`, which is correct, except the same path runs on a cold launch when Clerk resolves to signed-out, and at that point the SDK's current user is anonymous. RevenueCat refuses to log out an anonymous user, sensibly, since there's nothing to detach from. The fix reads `if (!Purchases.isAnonymous)`. The state machine had three states, signed in, signed out, and not yet known, and I'd been careful about the third everywhere except the launch where the second and third look identical.
+
+## What I'd take elsewhere
+
+Cap the thing whose growth you actually want to limit, and check the transition rather than the total. Most caps I've written measured whatever was easiest to count, which is usually rows, and rows are a proxy for a behaviour. Getting from one to the other cost an afternoon of rewriting a document, and would have cost a migration a week later.
+
+Put the check inside the transaction that does the write, and write down which isolation level you're relying on, because the lock is only half the mechanism. Give a value that can arrive twice its own ordering stamp, so the receiver can be dumb about arrival order. Make the repeat delivery boring, and commit the idempotency key together with the effect it guards rather than ahead of it.
+
+Part 4 is App Review, the production Clerk instance, and the parts of shipping an app that an agent couldn't do for me, including Apple's rule that a first in-app purchase gets reviewed alongside an app version rather than on its own, which made the paywall a first-submission requirement instead of a follow-up.
+
+All of this is in [the repository](https://github.com/chornonoh-vova/barklog), including the design document with the flat ten-entry cap in its rejected-alternatives section. The question from part 1 is still open: ten unfinished games, finishing one gives the slot back. If you've used it and ten is too tight, tell me, and I'll ship the change.
