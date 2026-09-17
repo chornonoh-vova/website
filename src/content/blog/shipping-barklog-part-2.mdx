@@ -18,7 +18,7 @@ It's late, you're on your phone, a game goes past in a video, and you want to ke
 
 What the receiving app gets is a string. Usually something like `https://www.youtube.com/watch?v=1vs0lLIRt7w`: eleven characters of opaque identifier attached to a hostname. The game you meant isn't in there. The title isn't in there. Nothing about the thing you wanted to remember survived the tap.
 
-Part 1 was the architecture an agent-assisted build pushed me into. This one is a single feature inside it, and it's the feature where all the interesting work is recovery: turning that string back into a specific row in a games database, without handing a stranger a server that fetches whatever URL they type.
+[Part 1](/blog/shipping-barklog-part-1/) was the architecture an agent-assisted build pushed me into. This one is a single feature inside it, and it's the feature where all the interesting work is recovery: turning that string back into a specific row in a games database, without handing a stranger a server that fetches whatever URL they type.
 
 ## What a share sheet actually hands you
 
@@ -176,6 +176,6 @@ The source preview sizes its thumbnail from the dimensions the provider reported
 
 If you take one thing from this, take the pinning. Anything that accepts a URL and fetches it has this exact problem: a link preview, an avatar-by-URL field, a webhook tester, an RSS reader. The check-then-fetch version looks correct and isn't. The rest is the same instinct further down. Canonicalise before you cache, so the key means something. Let each rung fail in the way that's true of it instead of uniformly. Tell the user which rung answered. Put the expensive call behind a gate that only opens once the cheap one has given up.
 
-Part 3 is the free tier: where the cap is enforced, and what happens when a purchase and a webhook race each other. Part 4 is App Review.
+[Part 3](/blog/shipping-barklog-part-3/) is the free tier: where the cap is enforced, and what happens when a purchase and a webhook race each other. Part 4 is App Review.
 
 Every design document behind this post is in [the repository](https://github.com/chornonoh-vova/barklog) under `docs/`, including the one admitting the two-provider limit was never a decision. And if you've shared a link into Barklog and it got the game wrong, I'd like that link. The failures I can reproduce are the ones I can fix.

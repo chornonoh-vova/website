@@ -2,34 +2,43 @@
 title: "Shipping Barklog: Part 3"
 description: "A cap on hoarding rather than on saving, enforced in one transaction, and what a server does when a purchase and a webhook arrive with no order between them"
 date: 2026-09-17
-draft: false
 series:
   name: "Shipping Barklog"
   part: 3
   label: "The free tier"
 ---
 
+import Figure from "../../components/Figure.astro";
+
+import BarklogCapTransaction from "../../assets/images/barklog-cap-transaction.svg";
+
 Every free tier you've used works the same way. You get some number of the thing, and when you want more than that number, you pay. The number is round, the app shows you where you stand against it, and nobody needs the rule explained twice.
 
 Barklog has one of those. The number is ten.
 
-The work went into deciding what the ten counts, because the obvious answer taxes the behaviour the app exists to encourage, and the obvious answer is what I wrote down first. This post is the free tier: the rule, the one place it's enforced, and the thing both earlier posts promised, which is what a server does when a purchase and a webhook reach it with no order between them.
+The free tier is four decisions: what the ten counts, where that rule is written down, the one place it's enforced, and what the server does when a purchase and a webhook arrive with no order between them. The first one took the longest, because the obvious answer taxes the behaviour the app exists to encourage, and the obvious answer is what I wrote down first.
 
 ## Ten of what
 
-Part 1 covered the brief I was building against, two sentences from a competition category I couldn't edit, asking for an app judged on how well people can organize, complete, rate and share their games. The first version of the premium design proposed a free tier of ten backlog entries. Total. Add an eleventh game, meet the paywall.
+[Part 1](/blog/shipping-barklog-part-1/) covered the brief I was building against, two sentences from a competition category I couldn't edit, asking for an app judged on how well people can organize, complete, rate and share their games. The first version of the premium design proposed a free tier of ten backlog entries in total. Add an eleventh game, and you meet the paywall.
 
-Everybody understands that rule, and it's wrong here for a reason it took me longer than I'd like to see. A backlog entry is never released. You add Hades, you play it, you finish it, and the finished row keeps its slot. The design document's rejected-alternatives section says it plainly: ten total entries "is consumed in the first session and never recovers, because a finished game keeps occupying a slot forever".
+Everybody understands that rule, and it took me longer than I'd like to see what's wrong with it here. Say you use Barklog the way I hoped somebody would. You save ten games over a couple of weeks, you play three of them, you finish two. Then a game goes past in a video at eleven at night, you hit share, and you meet the paywall. The two games you finished bought you nothing, because a backlog entry is never released. You add Hades, you play it, you finish it, and the finished row keeps its slot.
 
-Follow that to the user. The cap fills up through saving, which is the gesture the app is built around, so the person most likely to hit it is the person using Barklog correctly. Finishing a game, the act you'd most want to reward, does nothing for them. After the eleventh save every verb in the brief sits behind a wall that doesn't move again.
+The design document's rejected-alternatives section says it plainly: ten total entries "is consumed in the first session and never recovers, because a finished game keeps occupying a slot forever".
+
+That's the wrong person to charge. The cap fills up through saving, which is the gesture the app is built around, so the first person to hit it is the person using Barklog correctly. Finishing a game, the act you'd most want to reward, does nothing for them. After the eleventh save every verb in the brief sits behind a wall that doesn't move again.
 
 So the cap counts unfinished games. `waiting` and `playing` occupy a slot. `completed` and `abandoned` are free and unlimited, and moving a game into either of them hands the slot back. You can hold a thousand finished games on a free account. What you can't do for free is hold more than ten things you haven't started.
+
+It's a parking space rather than a punch card. A punch card gets spent, and the tenth punch is the end of it. A parking space comes back the moment you drive away. Same number on the sign, and a different app: you finish Hades, the spot comes back, and the game from the video gets saved.
 
 That's the whole product decision, and it's maybe fifteen lines of difference in the implementation. Part 1's argument was that an agent moves the expensive part of a build out of typing and into deciding. The free tier is the cleanest evidence I have, since almost none of it is code.
 
 Ten is a judgement call rather than a derived number, and I took it on the condition that the count is visible from the first add. A wall you only meet at your eleventh game is the chore the brief penalises.
 
 ## The rule is one function
+
+Barklog's backlog write is an upsert. One `PUT /api/backlog/:gameId` carries a status and an optional rating, and it either creates an entry or moves an existing one, so the same endpoint can raise the active count, lower it, or leave it where it was. The difference is what the entry was before.
 
 ```ts
 /**
@@ -49,8 +58,6 @@ export function slotDelta(
 }
 ```
 
-Barklog's backlog write is an upsert. One `PUT /api/backlog/:gameId` carries a status and an optional rating, and it either creates an entry or moves an existing one, so the same endpoint can raise the active count, lower it, or leave it where it was. The difference is what the entry was before.
-
 Checking against the total looks fine until you sit at ten of ten and try to finish something. `completed` doesn't consume a slot, so that write lowers the count, but a naive `activeCount >= 10` refuses it, and you've just blocked the one action that would have unblocked the user. The other direction matters as much: moving a completed game back to `playing` at ten of ten has to be refused, and a total-based check that special-cased "completing is always allowed" would wave it through.
 
 `slotDelta` answers the only question there is: whether this transition consumes a slot, gives one back, or does neither. Everything downstream reads `delta > 0` and stops thinking about statuses. A rating change on a game you're already playing comes back zero, so it never touches the subscription table at all.
@@ -65,34 +72,13 @@ The function lives in `packages/contracts`, which the API and the app both alrea
 
 A cap is a read followed by a write, which are the two halves of every concurrency bug I've had to explain to somebody. Count nine, decide there's room, write the tenth. Two requests do that at once and both of them count nine.
 
-```txt
-PUT /api/backlog/:gameId
-|
-v
-game in the mirror? -> no -> 404
-|
-v
-BEGIN
-|
-v
-SELECT 1 FROM users WHERE id = $1 FOR UPDATE
-|
-v
-delta = slotDelta(existing status, requested status)
-|
-+-- delta <= 0 -> write -> COMMIT -> 200 or 201
-|
-v
-premium? -> yes -> write -> COMMIT -> 200 or 201
-|
-v
-count(waiting, playing) + delta > 10 ?
-|
-+-- yes -> ROLLBACK -> 402 { activeCount, limit }
-|
-v
-write -> COMMIT -> 201
-```
+<Figure caption="Cap enforcement flow">
+  <BarklogCapTransaction
+    class="mx-auto"
+    role="img"
+    aria-label="A PUT to /api/backlog/:gameId is answered with a 404 unless the game is in the mirror. Otherwise the route opens a transaction, locks the user's own row with SELECT ... FOR UPDATE, and calculates the slot delta for the requested status change. A delta of zero or less writes and commits, answering 200 or 201. A positive delta writes and commits the same way for a premium user. For a free user the route counts the waiting and playing entries: within the limit it writes and commits, and over the limit it rolls back and answers 402."
+  />
+</Figure>
 
 The route opens the transaction, and its first statement is a [`SELECT ... FOR UPDATE`](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS) on the user's own row. It reads nothing anybody wants. It's there so a second write for the same user waits at that line until the first one commits, which turns two racing requests into two sequential ones.
 
@@ -125,53 +111,132 @@ Part 1 spends most of its argument keeping other people's servers out of the req
 
 It arrives two ways, and that's the design rather than a redundancy bolted on later. RevenueCat [posts events](https://www.revenuecat.com/docs/integrations/webhooks) to `/webhooks/revenuecat`, one of the few routes that isn't behind a session token, which proves itself with a shared secret plus an HMAC over `X-RevenueCat-Webhook-Signature`. Separately, the app can ask the API to go and look: `POST /api/subscription/refresh` calls `https://api.revenuecat.com/v1/subscribers/{app_user_id}` with the secret key and writes what it finds. Both paths end at the same table through the same upsert. The refresh gets its own rate-limit scope of ten a minute, since it's the only route that reaches a third party while somebody waits.
 
+Both checks run before the payload is parsed, and the first one has a trap in it:
+
+```ts
+/**
+ * Length check first: `timingSafeEqual` throws on a mismatch. Empty rejected
+ * before that, because `timingSafeEqual` on two zero-length buffers returns
+ * true — so an empty secret would authenticate the empty `Authorization` header
+ * Hono hands back for a present-but-blank one.
+ */
+function constantTimeEquals(provided: string, expected: string): boolean {
+  if (provided.length === 0 || expected.length === 0) return false;
+
+  const a = Buffer.from(provided);
+  const b = Buffer.from(expected);
+
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+```
+
+Two empty buffers comparing equal is correct, and it's the kind of correct that opens an endpoint. `env.ts` validates the secret with `minLength(1)`, but by the time it reaches the route it's a plain string, so the invariant doesn't travel with the value and the check has to be made again where it's used.
+
+The HMAC has a constraint of its own. It's computed over `${t}.${rawBody}`, and `rawBody` has to be the bytes as received:
+
+```ts
+// `text()` before the validator's `json()`: Hono caches the body and
+// derives the parsed value from the cached text, so nothing is consumed
+// twice — and the HMAC must see the bytes as received.
+const rawBody = await c.req.text();
+```
+
+Re-serialising a parsed object changes those bytes, and then every legitimate delivery fails at once, which reads like a wrong secret rather than a bytes problem.
+
 ## Two routes, no order
 
 Here's the part both earlier posts promised. A purchase completes on the device. The RevenueCat SDK knows immediately and the server doesn't. Somewhere in the next second a webhook shows up, and in the same second the app asks the server to refresh, from an entitlement listener and from the paywall sheet's own purchase callback. Nothing orders any of it.
 
-```txt
-purchase completes on device
-|
-+-- SDK pushes CustomerInfo to the listener
-|   |
-|   v
-|   entitlement actually changed? -> no -> nothing happens
-|   |
-|   v
-|   POST /api/subscription/refresh (2 tries, never rethrows)
-|   |
-|   v
-|   GET /v1/subscribers/<clerk sub>
-|   |
-|   +-- throws -> 502 -> user stays on the free tier
-|   |
-|   v
-|   lastEventAtMs = now  --upsert--> subscriptions
-|
-+-- RevenueCat POSTs /webhooks/revenuecat
-    |
-    v
-    secret + HMAC -> bad -> 401 -> RevenueCat retries
-    |
-    v
-    BEGIN
-    |
-    +-- user tombstoned -> store event scrubbed -> 200
-    |
-    +-- event id already stored -> 200, nothing written
-    |
-    v
-    event_timestamp_ms --upsert--> subscriptions
-                                   WHERE stored <= incoming
+Both paths are written to fail quietly, and the client's refresh explains itself in its own comment:
+
+```ts
+/**
+ * Asks the server to re-read RevenueCat, retrying once and never rethrowing.
+ *
+ * Shared by the provider's entitlement listener and the paywall sheet's
+ * purchase and restore callbacks, because a rejection has nowhere to go in
+ * either: one runs inside a native listener callback, the other outlives its
+ * component. Swallowing it silently would be worse, though — this POST is the
+ * only way a subscription whose webhook never landed reaches our database, so a
+ * failure here is why a paying user is still on the free tier.
+ */
 ```
+
+Two attempts rather than more, since it runs on user-initiated events and has to stay well clear of that ten-a-minute limit. If the API's own call to RevenueCat throws, it answers 502 and the user stays on the free tier until the webhook lands. A webhook that fails its signature check gets a 401, which is RevenueCat's cue to send it again.
 
 What makes the race harmless is that neither writer trusts its own arrival time. Every write carries `lastEventAtMs`, and the upsert refuses to apply behind a value already in the row. A webhook stamps the event's own timestamp. The REST pull stamps `Date.now()`, which looks reckless at first, since it means a refresh wins against any webhook it races.
 
+It's the last field the REST client fills in:
+
+```ts
+// Unknown renewal is treated as "will not renew": a false negative on
+// the paywall is harmless, a false positive tells the app a lapsing
+// subscription is healthy.
+willRenew: subscription === undefined ? false : !subscription.unsubscribe_detected_at,
+sandbox: subscription?.is_sandbox ?? false,
+// The freshest answer available, so it must beat the staleness guard.
+lastEventAtMs: Date.now(),
+```
+
 It's safe because the two payloads aren't the same kind of thing. A webhook is a delta, one event describing one transition, and applying an old one over a newer one resurrects a subscription that's already cancelled. The REST read is the subscriber's current state, so it already contains whatever an earlier event would have told us. Stamping it `now` claims it's the freshest answer available, and it is.
 
-The comparison is `<=` rather than `<`, which the query comments on: a redelivery of the newest event must still apply, because a partial write looks exactly like no write at all.
+The guard is a `where` on the upsert, so a stale event is dropped by Postgres rather than by a branch somebody has to remember to write:
+
+```ts
+.onConflictDoUpdate({
+  target: subscriptions.userId,
+  set: { /* every column, including lastEventAtMs */ },
+  where: sql`${subscriptions.lastEventAtMs} <= ${row.lastEventAtMs}`,
+});
+```
+
+The write applies when the incoming stamp is greater than or equal to the stored one, which is why the clause reads `stored <= incoming`. Equal has to count, and the function comments on why: a redelivery of the newest event must still apply, because a partial write looks exactly like no write at all.
 
 Idempotency is the other half, and this is the third time the series has landed on the same instinct. Part 1 had a sync worker where a failed run is a no-op, and a Clerk `user.deleted` webhook written to succeed on a user who's already gone. Here the RevenueCat event id is the primary key of the event log, so [`ON CONFLICT DO NOTHING`](https://www.postgresql.org/docs/current/sql-insert.html#SQL-ON-CONFLICT) is the entire duplicate check, with no dedupe table and no window to reason about. A second delivery finds the id stored, writes nothing, and answers 200, because anything other than a 2xx tells RevenueCat to retry something that already landed.
+
+Here's the transaction, with the longer comments trimmed since the paragraphs below say the same thing:
+
+```ts
+const outcome = await deps.db.transaction(async (tx) => {
+  if (await isUserDeleted(tx, event.app_user_id)) {
+    await recordSubscriptionEvent(tx, {
+      id: event.id,
+      userId: null,
+      type: event.type,
+      payload: scrubEventPayload(event),
+    });
+
+    return "deleted-user" as const;
+  }
+
+  const isNew = await recordSubscriptionEvent(tx, {
+    id: event.id,
+    userId: event.app_user_id,
+    type: event.type,
+    payload: event,
+  });
+
+  // `ON CONFLICT DO NOTHING` wrote nothing, so this commits nothing —
+  // and it must stay a 200, or RevenueCat retries a delivery we have
+  // already applied.
+  if (!isNew) return "duplicate" as const;
+
+  const row = toSubscriptionRow(event);
+
+  // Recorded and genuinely processed: there is no subscription state in
+  // this payload to apply.
+  if (row === null) return "no-state" as const;
+
+  await ensureUser(tx, event.app_user_id);
+
+  // Unconditional: the upsert's WHERE clause drops stale events.
+  await upsertSubscription(tx, row);
+
+  return "applied" as const;
+});
+```
+
+Every one of those four outcomes answers 200, which is the contract with RevenueCat's retries: anything else means send it again.
 
 The ordering inside that transaction surprised me. The event id and the effect it guards commit together. Record the id first and commit it on its own, and a failure in the upsert answers 500, RevenueCat retries, the retry sees a known id, calls itself a duplicate and returns 200. The subscription is never written, the purchase is gone silently, and a log line is the only trace. Rolling both back leaves the retry a genuinely unprocessed event.
 
@@ -180,6 +245,23 @@ Two branches in that transaction I didn't anticipate. Deleting a Barklog account
 ## The client is never the authority
 
 The app reads entitlement from `GET /api/me`, not from the SDK's `customerInfo`. The API enforces the cap, so the UI has to agree with the enforcer or it ships enabled buttons the server rejects. `customerInfo` is only a signal that something changed.
+
+The answer it reads is two lines, and the interesting part is what they leave out:
+
+```ts
+/**
+ * `sandbox` is deliberately absent: App Review buys in Apple's sandbox against
+ * the production build, so refusing those entitlements shows a reviewer a
+ * completed purchase and an unchanged paywall — a documented rejection.
+ */
+export function isPremium(row: SubscriptionRow | null, now: Date): boolean {
+  if (row === null) return false;
+
+  return row.expiresAt === null || row.expiresAt > now;
+}
+```
+
+`willRenew` is stored and not consulted either, because a cancelled subscription is still paid up until it expires. The sandbox flag is part 4's problem arriving early.
 
 That makes "unknown" a real state, and it gets handled rather than collapsed. `usePremium()` returns `boolean | undefined`, and the proactive check refuses to guess:
 
@@ -200,7 +282,7 @@ Guessing "free" while `/me` loads would refuse a legitimate add, and guessing it
 
 The paywall is reached two ways and both are needed. The proactive path runs `slotDelta` in the status picker and pushes the paywall route instead of mutating, which stops the optimistic update from drawing the game as added and then snapping it back. The defensive path branches on a 402 in the mutation's `onError`, rolls back, pushes the same route and skips the usual alert, since a sheet plus an alert is two dismissals for one event. It catches what the first can't see: a stale count, another device, an older build.
 
-It's a route rather than a gate. Nothing is wrapped in a `SubscriptionGate`, because the free tier is meant to be fully usable, and `onDismiss` is a plain `router.back()`. The design document originally called for a `pageSheet`, on the argument that a sheet reads as an offer and a full-screen takeover reads as a wall. It ships as a `fullScreenModal`, the same as the share screen in part 2, because having every modal in the app behave the same way turned out to matter more. What keeps it an offer is that you can close it at any point, which is a property of the route rather than of how it's presented.
+It's a route rather than a gate. Nothing is wrapped in a `SubscriptionGate`, because the free tier is meant to be fully usable, and `onDismiss` is a plain `router.back()`. The design document originally called for a `pageSheet`, on the argument that a sheet reads as an offer and a full-screen takeover reads as a wall. It ships as a `fullScreenModal`, the same as the share screen in [part 2](/blog/shipping-barklog-part-2/), because having every modal in the app behave the same way turned out to matter more. What keeps it an offer is that you can close it at any point, which is a property of the route rather than of how it's presented.
 
 The count is never a surprise. The backlog screen already loads its per-status stats, so the free-tier label derives from the same `SLOT_CONSUMING_STATUSES` constant the server counts with, rather than restating "waiting plus playing" somewhere new. It reads "7 of 10 spots used", and at the limit it states the mechanic instead: finish a game to free one. Tapping it opens the paywall. For a subscriber it disappears, and a star in the profile toolbar opens RevenueCat's [Customer Center](https://www.revenuecat.com/docs/tools/customer-center), where Restore Purchases lives for somebody who'll never see the paywall again.
 
@@ -208,9 +290,15 @@ The real bug in all of this was four lines. On sign-out the provider called `Pur
 
 ## What I'd take elsewhere
 
-Cap the thing whose growth you actually want to limit, and check the transition rather than the total. Most caps I've written measured whatever was easiest to count, which is usually rows, and rows are a proxy for a behaviour. Getting from one to the other cost an afternoon of rewriting a document, and would have cost a migration a week later.
+The free tier came down to five habits I'd repeat on the next thing I build:
 
-Put the check inside the transaction that does the write, and write down which isolation level you're relying on, because the lock is only half the mechanism. Give a value that can arrive twice its own ordering stamp, so the receiver can be dumb about arrival order. Make the repeat delivery boring, and commit the idempotency key together with the effect it guards rather than ahead of it.
+- Cap the thing whose growth you actually want to limit. Most caps I've written measured whatever was easiest to count, which is usually rows, and rows are a proxy for a behaviour.
+- Check the transition rather than the total, so the action that would free a slot can never be the action you refuse.
+- Put the check inside the transaction that does the write, and write down which isolation level you're relying on, because the lock is only half the mechanism.
+- Give a value that can arrive twice its own ordering stamp, so the receiver can be dumb about arrival order.
+- Commit the idempotency key together with the effect it guards rather than ahead of it, and make the repeat delivery boring.
+
+Getting from the easy count to the right one cost an afternoon of rewriting a document. A week later it would have cost a migration.
 
 Part 4 is App Review, the production Clerk instance, and the parts of shipping an app that an agent couldn't do for me, including Apple's rule that a first in-app purchase gets reviewed alongside an app version rather than on its own, which made the paywall a first-submission requirement instead of a follow-up.
 
