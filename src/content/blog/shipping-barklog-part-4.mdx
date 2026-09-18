@@ -1,12 +1,70 @@
 ---
 title: "Shipping Barklog: Part 4"
-description: "App Review, a production Clerk instance that inherits nothing, and the parts of shipping an app an agent could not do for me"
+description: "Four submissions, three rejections, two weeks. The fixes were two videos and a EULA, the age rating was the one thing that reached back into the code, and a production Clerk instance inherits nothing"
 date: 2026-09-18
-draft: true
+draft: false
 series:
   name: "Shipping Barklog"
   part: 4
   label: "App Review"
 ---
 
-Not written yet.
+The build is the part anyone wants to talk about. That's three posts of it so far: the [architecture](/blog/shipping-barklog-part-1/) the design documents settled, the [pipeline](/blog/shipping-barklog-part-2/) that turns a shared link back into a specific game, the [free tier](/blog/shipping-barklog-part-3/) and the transaction that enforces it. Shipping sounds like what happens afterwards, once the code works. You upload a binary, somebody looks at it, the app appears.
+
+Barklog's code was ready on 1 September. It went live on 14 September. Almost nothing in those two weeks was code.
+
+## Two weeks
+
+
+The first four days never touched a repository. Two dozen screenshots at the sizes Apple asks for, a set of Figma designs for the store page they sit on, the listing copy, the age-rating questionnaire, and the subscription itself set up in App Store Connect.
+
+Four submissions, three rejections, and two weeks from the code being ready to the app being live. The first three reviews came back the same day or the next, which is quicker than I'd braced for, and it's most of why this reads as a smooth launch rather than a bad fortnight. A rejection arrived, I fixed it, I resubmitted that evening or the following morning.
+
+The fourth review took four days. I don't have an explanation for it. Nothing about the submission was different and I hadn't touched anything the reviewer would see, and I was at the edge of my seat the entire time. Three same-day rejections teach you the loop is fast. Then the loop stops being fast on the one submission where there's nothing left to fix.
+
+## Three rejections, and what fixed them
+
+The first was the generic new-app one. Apple wanted more information about what the app does, which is fair for something nobody at Apple has seen before. I recorded a detailed video walking through every feature, from a cold install to a saved game to a finished one, and attached it to the review notes.
+
+The second was subscriptions: a missing EULA, and missing information in App Store Connect. I pointed the listing at [Apple's standard EULA](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) and filled in the links to the privacy policy, the terms and the support page on the landing site. Nothing in the codebase changed for that one. The terms page had been written on 3 September, days before anybody rejected anything, and the rejection wasn't about what it said. It was about a form field in App Store Connect that pointed nowhere.
+
+The third was account deletion. Barklog does delete accounts, properly: [part 1](/blog/shipping-barklog-part-1/) covers the mechanism, where a Clerk `user.deleted` webhook arrives and the API removes that user's rows and scrubs their subscription events in one transaction. The reviewer couldn't find the button. So I recorded a second video showing where it lives, and that fixed it too.
+
+I didn't change the UI. The deletion path is still behind the avatar, under Security, exactly where it was when the reviewer missed it. What I shipped was a video that helps one person find it, and a real user hunting for the same thing doesn't get a video. That's an open problem rather than a solved one, and I'd rather write that down than pretend the rejection taught me something I acted on.
+
+## The age rating reached into the codebase
+
+The one piece of submission paperwork that changed code was the age-rating questionnaire, and it was awkward for a reason specific to how Barklog is built.
+
+The questionnaire asks whether your app contains various categories of content. Barklog contains a copy of [IGDB](https://www.igdb.com/), 374,000 games mirrored into Postgres, which [part 1](/blog/shipping-barklog-part-1/) argued for on availability grounds. You can't answer "does your app contain X" about a catalogue you copied from somebody else unless you control what ends up in the copy. The answer isn't a fact about my code. It's a fact about their data, arriving nightly.
+
+So the answer became a filter. IGDB tags adult titles with a theme of its own, and Barklog mirrors no screenshots at all for those games. Covers and summaries stay, since IGDB bars full nudity from covers, and the rating answers None for graphic sexual content and Infrequent for non-graphic.
+
+That runs in two places. `mapGames` drops the screenshots on the way in, so they never reach Postgres, and a nightly sweep in `apps/worker/src/sweep.ts` clears anything already stored. The second one has to exist because the incremental sync only revisits games whose `updated_at` moved, so a game IGDB re-tagged after Barklog had already mirrored it would keep its screenshots indefinitely. The sweep asks IGDB which games carry the tag right now, keyset-pages the ids the same way the main sync does, and deletes:
+
+```ts
+const removed = await deps.db
+  .delete(schema.gameScreenshots)
+  .where(inArray(schema.gameScreenshots.gameId, ids))
+  .returning({ gameId: schema.gameScreenshots.gameId });
+```
+
+Deleting ids Barklog doesn't mirror is a harmless no-op, so it never needs to know what it already has.
+
+This is the bill for owning a copy. Part 1 spent its longest section on why the mirror is worth it and I still think all of that holds. What I hadn't seen coming is that a mirror makes you the publisher of somebody else's moderation lag. If I'd been proxying a live API I'd have been answering the questionnaire about an API. Owning the rows means answering it about 374,000 of them, and answering it again every night.
+
+## Two things that had to exist before the first submission
+
+A Clerk production instance doesn't inherit anything from your development one. I knew that in the abstract and hadn't internalised how much it covers. In development, Apple and Google sign-in work through shared credentials Clerk provisions for you automatically. In production those options weren't displayed at all, and reading the app code was never going to explain it, because the app wasn't wrong. Diffing `/v1/environment` between the two instances is what makes it visible: the production response just doesn't list the providers. Setting both up from scratch with my own credentials is the fix, and Clerk's [deployment guide](https://clerk.com/docs/guides/development/deployment/production) and [Apple connection docs](https://clerk.com/docs/guides/configure/auth-strategies/social-connections/apple) both say so plainly once you know that's the page you need.
+
+The other one shaped the schedule rather than an afternoon. A first in-app purchase gets reviewed alongside an app version rather than on its own, so there's no path where you ship 1.0 and add Premium in 1.1 as a quiet follow-up. [Part 3](/blog/shipping-barklog-part-3/) is a whole post about the free tier, the slot delta, the webhook race and the paywall route, and the reason all of it existed before launch instead of after it is that rule. The subscription rejection is downstream of the same thing. An app with no purchases in its first binary doesn't have a EULA field to leave empty.
+
+## What the four parts add up to
+
+Part 1's claim was that a coding agent moves the expensive part of a build out of typing and into deciding. This last stretch had very little of either. It was a questionnaire, two dozen screenshots, a set of Figma designs, two screen recordings, a EULA link, a set of OAuth credentials, and four days of waiting with nothing to do about it.
+
+The place the agent helped most was App Store Connect, which is the part furthest from any codebase, for someone who'd never done it before. It wasn't writing the fixes, since two of the three rejections had no code in them at all. It was working out what a rejection meant, which field it pointed at, and what Apple wanted in that field. The whole thing went pretty smoothly, and that's the part I'd least have predicted in August.
+
+Across four posts the same shape keeps showing up. Decide it in prose, write the decision down, and let the code be the consequence: the mirror, the pinned fetch, the slot delta, the age-rating filter that turned out to be a design document's bill arriving two weeks late. None of it got faster because I typed faster, and the one stretch where I couldn't decide anything was the one where I just had to wait.
+
+Barklog is on the App Store at [barklog.gg](https://barklog.gg), and everything behind these four posts, the design documents and their rejected alternatives included, is in [the repository](https://github.com/chornonoh-vova/barklog).
