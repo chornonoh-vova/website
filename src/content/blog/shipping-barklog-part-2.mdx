@@ -112,11 +112,167 @@ Two failures made it untenable. An IGN review or a Vimeo upload came back `UNPRO
 
 > When a video is called "THIS CHANGES EVERYTHING" on a channel nobody has heard of, there is nothing in the input to work with, and the answer is `none` — even though the link itself, handed to a search engine, would settle it in one query.
 
-So extraction became two passes against [OpenAI's API](https://platform.openai.com/docs/api-reference/responses), on `gpt-5.4-mini` by default. Pass one gets the title, the author and the site, no tools, reasoning effort `none`, and picks a tier: `title` if the title names or implies a game, `author` if it recognises the channel and knows what it covers, `none` otherwise. Only on `none` does pass two run, with the URL included and a web search tool attached.
+So extraction became two passes against [OpenAI's Responses API](https://platform.openai.com/docs/api-reference/responses), on `gpt-5.4-mini` by default.
 
-The gate exists because of arithmetic. A search bills at $10 per 1000 calls plus roughly 8k input tokens, about $0.016 against $0.0002 for pass one, so roughly eighty times the price. Every YouTube link keeps the cost profile it already had, and only the links that actually stumped the cheap path pay for the expensive one. A pass-two failure throws instead of degrading to pass one's `none`, because a throw propagates uncached and returning that `none` would pin a dead end in the cache for 30 days.
+Both passes share one instruction about what a title should look like, because the answer feeds a trigram search against the mirror and `RE2` matches nothing there:
+
+```ts
+const CANON = `Reply with the game's canonical English title as a games
+database would list it, not as the source spells it. Expand abbreviations
+and nicknames: "RE2" is "Resident Evil 2", "BOTW" is "The Legend of
+Zelda: Breath of the Wild", "GTA V" is "Grand Theft Auto V".
+
+Give up to ${MAX_GUESSES} titles, most likely first. When a title could
+mean an original or its remake, list both, original first. Never pad the
+list to reach ${MAX_GUESSES}.`;
+```
+
+`MAX_GUESSES` is 3 because each guess costs one search against the mirror, so the model's fan-out is bounded by what the next stage pays for it. The last sentence is there because a model asked for up to three will cheerfully find three.
+
+Pass one sees the title, the author and the site, and is told to work down a ladder and report which rung it stopped on:
+
+```ts
+const PASS_1_SYSTEM = `You identify which video game a shared page or
+video is about, from its title, its author and the site it came from.
+
+${CANON}
+
+Work down these tiers, stop at the first that applies, and set \`basis\`
+to the tier you used:
+- "title": the title names or clearly implies a game.
+- "author": it does not, but you recognise the author or site, a channel,
+  a creator, a publication, and it covers a game or a small set of games.
+  Guess those.
+- "none": neither. Return no titles.
+
+Never invent an author or site you do not recognise.`;
+```
+
+That `basis` field is the part I would take to another project. I didn't ask for a confidence score, because a number between zero and one out of a language model is a number I can't act on. A tier is different. It says what kind of evidence produced the answer, and each tier maps to a sentence I'm willing to put in front of a user. "Matches for the title" is a different claim from "Games this channel usually covers", and the screen renders whichever one the model earned.
+
+## Two calls, and where the trust ends
+
+Each pass gets a strict JSON schema, and the two don't share an enum:
+
+```ts
+export const PASS_1_BASES = ["title", "author", "none"] as const;
+export const PASS_2_BASES = ["web", "none"] as const;
+
+function schemaFor(bases: readonly string[]) {
+  return {
+    type: "json_schema" as const,
+    name: "game_titles",
+    strict: true,
+    schema: {
+      type: "object",
+      properties: {
+        titles: { type: "array", items: { type: "string" } },
+        basis: { type: "string", enum: [...bases] },
+      },
+      required: ["titles", "basis"],
+      additionalProperties: false,
+    },
+  };
+}
+```
+
+Pass one can't answer `web` and pass two can't answer `title`, because neither value exists in the other's enum. The provenance claim is enforced by the decoder rather than by the wording above it, and that distinction is the whole reason I trust the label enough to print it. A prompt is advice. A schema isn't.
+
+The two calls are tuned differently on purpose:
+
+```ts
+const first = await client.responses.create({
+  model: options.model,
+  instructions: PASS_1_SYSTEM,
+  input: described,
+  max_output_tokens: PASS_1_MAX_OUTPUT_TOKENS,
+  reasoning: { effort: "none" },
+  text: { format: schemaFor(PASS_1_BASES) },
+});
+
+const pass1 = parseExtraction(first.output_text, PASS_1_BASES);
+if (pass1.basis !== "none") return pass1;
+
+const second = await client.responses.create(
+  {
+    model: options.model,
+    instructions: PASS_2_SYSTEM,
+    input: `${described}\nURL: ${meta.pageUrl}`,
+    max_output_tokens: PASS_2_MAX_OUTPUT_TOKENS,
+    reasoning: { effort: "low" },
+    tools: [{ type: "web_search", search_context_size: "low" }],
+    text: { format: schemaFor(PASS_2_BASES) },
+  },
+  { maxRetries: 0 },
+);
+```
+
+Pass one runs at reasoning effort `none`. Deciding whether a title names a game is recall, not thinking, and paying for reasoning tokens to answer it is paying for the wrong thing. Pass two gets `low`, because it has to read search results and weigh them.
+
+The token budgets differ for a reason that cost me a debugging session. Pass one caps at 256, which is generous for three short strings. Pass two needs 1024, because reasoning items and web-search tool calls also land in the output array, and 256 doesn't survive them. The failure mode when it doesn't survive is not an error, it's a truncated response that fails to parse, which is a much more annoying thing to chase.
+
+`maxRetries: 0` on the second call is the one setting I'd have got wrong without reading the billing page first. The SDK retries twice by default, and the client is already built with `maxRetries: 1` and a 20-second timeout instead of the default ten minutes. On pass two even one retry is wrong, because the call that failed had already paid for a web search, and the retry buys a second one for the same answer.
+
+Then the output stops being trusted:
+
+```ts
+export function parseExtraction(raw: string, allowed: readonly string[]): Extraction {
+  const schema = v.object({
+    titles: v.array(v.pipe(v.string(), v.trim())),
+    basis: v.picklist(allowed),
+  });
+
+  const parsed = v.parse(schema, JSON.parse(raw));
+  const titles = parsed.titles.filter((title) => title !== "").slice(0, MAX_GUESSES);
+
+  if (parsed.basis === "none" || titles.length === 0) return { titles: [], basis: "none" };
+
+  return { titles, basis: parsed.basis as Extraction["basis"] };
+}
+```
+
+Structured output guarantees the shape, not the sense. A response can satisfy that schema perfectly and still claim `basis: "title"` with an empty array, or hand back three strings where one is `""`. The last branch collapses any of that to `none`, so the one thing the rest of the app relies on holds: a basis other than `none` always has at least one title behind it. Splitting this out from the API call also means the parsing rules are tested without a network or a key, which is most of what I wanted to be able to change quickly.
+
+Everything here throws rather than degrades. A malformed response from pass two doesn't fall back to pass one's `none`, and the reason is the cache.
+
+## The gate, and what a cached mistake costs
+
+The gate exists because of arithmetic. A search bills at $10 per 1000 calls plus roughly 8k input tokens, about $0.016 against $0.0002 for pass one, so roughly eighty times the price. Every YouTube link keeps the cost profile it already had, and only the links that actually stumped the cheap path pay for the expensive one.
+
+An extraction is cached for thirty days, which is what makes a wrong answer expensive in a different currency:
+
+```ts
+export function extractKey(promptVersion: number, model: string, meta: SourceMeta): string {
+  return `extract:v${promptVersion}:${model}:${meta.shareId}`;
+}
+```
+
+Both the prompt version and the model are in the key. Either one changing changes the answer, and thirty days outlives several deploys, so an edit to `PASS_1_SYSTEM` that isn't accompanied by a bump of `EXTRACT_PROMPT_VERSION` would keep serving answers from the prompt I just replaced. That constant sits directly above the prompts with a comment telling you to bump it, which is the least sophisticated possible solution and has not failed yet.
+
+A throw propagates uncached. Returning pass one's `none` after pass two broke would pin a dead end in Valkey for a month, for a link that might have resolved fine on the next attempt.
 
 Pass one deliberately doesn't see the URL. A slug is free signal, but a page with a usable slug has a title carrying the same words, and handing pass one the URL would blur the `title` tier into "title or URL", which isn't what the header promises.
+
+## The cache is doing product work
+
+Caching a model call isn't the same kind of optimisation as caching a database query, and the difference took me a while to see properly.
+
+The obvious half is money and time. Pass two costs about eighty times pass one, and the person who shared the link is watching a spinner while it runs. A hit costs nothing and returns immediately.
+
+The half that matters more is consistency. A model isn't a function. Ask it the same question twice and you can get two different answers, both defensible. Share the same YouTube link into Barklog twice and get two different games back, and nothing about that reads as "the model is probabilistic" to the person holding the phone. It reads as a bug. The cache is what makes a repeated share idempotent from the outside, which is a product property rather than a performance one.
+
+That is also why the canonicalisation two sections up is load-bearing rather than tidy. If the key were the raw URL, `youtu.be/x` and `m.youtube.com/watch?v=x` would miss each other, and the same video would get a second answer at a second price.
+
+There are two caches here, with separate budgets:
+
+```ts
+export const SOURCE_TTL_SECONDS = 604_800;
+export const EXTRACT_TTL_SECONDS = 2_592_000;
+```
+
+A week for the metadata, because a page's title effectively never changes. Thirty days for the extraction, and that number is deliberately not derived from the one above it. The extraction key already names everything its answer depends on, so it can't go stale underneath the metadata it was computed from.
+
+That last bit is the part I'd carry to anything else built on a model. Caching a pure function is easy, because the key is the arguments. With a model call the arguments aren't only what came in the request. They're the prompt, the model, the tool configuration, the reasoning effort, everything you would have to change in source control to change the answer. Anything left out of the key is a cache quietly serving answers from code you already deleted.
 
 ## The part most hackathon apps skip
 

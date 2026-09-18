@@ -82,18 +82,45 @@ A cap is a read followed by a write, which are the two halves of every concurren
 
 The route opens the transaction, and its first statement is a [`SELECT ... FOR UPDATE`](https://www.postgresql.org/docs/current/explicit-locking.html#LOCKING-ROWS) on the user's own row. It reads nothing anybody wants. It's there so a second write for the same user waits at that line until the first one commits, which turns two racing requests into two sequential ones.
 
-The comment in the route names the assumption it rests on, and that habit is worth stealing:
+Here is the whole thing, with the comments trimmed since the paragraphs below say the same thing:
 
 ```ts
-// The cap's whole mechanism, and it rests on READ COMMITTED: the
-// row lock serialises the racers, and the per-statement snapshot
-// means the loser's count below sees the winner's committed
-// insert. Under REPEATABLE READ the count would reuse the pre-lock
-// snapshot, both racers would read 9, and the cap would silently
-// stop holding.
+const outcome = await deps.db.transaction(async (tx) => {
+  await lockUser(tx, c.get("userId"));
+
+  const existing = await getBacklogEntry(tx, c.get("userId"), gameId);
+  const delta = slotDelta(existing?.status ?? null, status);
+
+  if (delta > 0) {
+    const subscription = await getSubscription(tx, c.get("userId"));
+
+    if (!isPremium(subscription, new Date())) {
+      const activeCount = await countBacklogEntriesByStatus(
+        tx,
+        c.get("userId"),
+        SLOT_CONSUMING_STATUSES,
+      );
+
+      if (activeCount + delta > FREE_ACTIVE_SLOTS) {
+        return { blocked: true as const, activeCount };
+      }
+    }
+  }
+
+  const { entry, created } = await upsertBacklogEntry(tx, {
+    userId: c.get("userId"),
+    gameId,
+    status,
+    rating: rating ?? null,
+  });
+
+  return { blocked: false as const, entry, created };
+});
 ```
 
-Locking is half of it. The loser also has to see the winner's row once the wait ends, and whether it does is a property of the [isolation level](https://www.postgresql.org/docs/current/transaction-iso.html) rather than of the lock. Raising isolation, which almost everyone assumes makes concurrency safer, is what breaks this one. A maintainer who flips that default now has a fighting chance of noticing.
+Four queries at most, and the order is the mechanism. `lockUser` goes first, so everything after it is serialised for that user. `getBacklogEntry` comes before `slotDelta`, because the delta is a function of what the entry already was. The count runs last and only when `delta > 0`, which is why finishing or re-rating a game costs no extra queries.
+
+Locking is half of it. The loser also has to see the winner's row once the wait ends, and whether it does is a property of the [isolation level](https://www.postgresql.org/docs/current/transaction-iso.html) rather than of the lock. Under READ COMMITTED every statement takes a fresh snapshot, so `countBacklogEntriesByStatus` on the losing request sees the insert the winner just committed. Under REPEATABLE READ it would reuse the snapshot taken before the lock, both racers would read nine, and the cap would stop holding without anything failing. Nothing in those thirty lines says so, which is why there is a comment above `lockUser` that does. A maintainer who raises that default has a fighting chance of noticing.
 
 Two smaller decisions came out of the same reasoning. `lockUser` throws when it locks no row, since `FOR UPDATE` over zero rows locks nothing and raises nothing, so a missing user would buy you no serialisation and no signal that you'd got none. And `countBacklogEntriesByStatus` returns zero for an empty status list: a silent "count everything" would uncap the free tier.
 
@@ -147,20 +174,33 @@ Re-serialising a parsed object changes those bytes, and then every legitimate de
 
 Here's the part both earlier posts promised. A purchase completes on the device. The RevenueCat SDK knows immediately and the server doesn't. Somewhere in the next second a webhook shows up, and in the same second the app asks the server to refresh, from an entitlement listener and from the paywall sheet's own purchase callback. Nothing orders any of it.
 
-Both paths are written to fail quietly, and the client's refresh explains itself in its own comment:
+Both paths are written to fail quietly. The client's refresh is the plainest case:
 
 ```ts
-/**
- * Asks the server to re-read RevenueCat, retrying once and never rethrowing.
- *
- * Shared by the provider's entitlement listener and the paywall sheet's
- * purchase and restore callbacks, because a rejection has nowhere to go in
- * either: one runs inside a native listener callback, the other outlives its
- * component. Swallowing it silently would be worse, though — this POST is the
- * only way a subscription whose webhook never landed reaches our database, so a
- * failure here is why a paying user is still on the free tier.
- */
+const REFRESH_ATTEMPTS = 2;
+const REFRESH_RETRY_MS = 2_000;
+
+export async function refreshSubscription(
+  api: Pick<Endpoints, "refreshSubscription">,
+): Promise<void> {
+  for (let attempt = 1; attempt <= REFRESH_ATTEMPTS; attempt += 1) {
+    try {
+      await api.refreshSubscription();
+      return;
+    } catch (error) {
+      if (__DEV__) {
+        console.warn(`refreshSubscription attempt ${attempt} failed`, error);
+      }
+
+      if (attempt < REFRESH_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, REFRESH_RETRY_MS));
+      }
+    }
+  }
+}
 ```
+
+Nothing is rethrown, because both callers are places a rejection has nowhere to go. One runs inside a native listener callback and the other outlives the component that started it. That is not the same as the failure being harmless. When the webhook lands, this call was a duplicate and losing it costs nothing. When the webhook never lands, this POST is the only route by which the subscription reaches the database at all, so a silent failure here is exactly why somebody who has paid could still be looking at the free tier.
 
 Two attempts rather than more, since it runs on user-initiated events and has to stay well clear of that ten-a-minute limit. If the API's own call to RevenueCat throws, it answers 502 and the user stays on the free tier until the webhook lands. A webhook that fails its signature check gets a 401, which is RevenueCat's cue to send it again.
 
