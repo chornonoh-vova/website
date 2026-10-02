@@ -16,7 +16,7 @@
   "dependencies": {
     "@astrojs/check": "^0.9.10",
     "@astrojs/mdx": "^8.0.1",
-    "@astrojs/react": "^6.0.5",
+    "@astrojs/react": "^6.0.6",
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.4",
     "@astrojs/vercel": "^11.0.10",
@@ -29,12 +29,12 @@
     "@tailwindcss/vite": "^4.3.3",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
-    "astro": "7.3.2",
+    "astro": "7.3.3",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.45.0",
+    "lucide-react": "^1.47.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-to-string": "^4.0.0",
-    "motion": "^13.2.0",
+    "motion": "^13.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "reading-time": "^1.5.0",
@@ -42,7 +42,7 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.13",
+    "@biomejs/biome": "^2.5.14",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "babel-plugin-react-compiler": "^1.0.0",
