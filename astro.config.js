@@ -32,9 +32,7 @@ export default defineConfig({
     }),
     sitemap(),
     react({
-      babel: {
-        plugins: ["babel-plugin-react-compiler"],
-      },
+      compiler: true,
     }),
   ],
 
