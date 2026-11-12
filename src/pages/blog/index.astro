@@ -42,13 +42,11 @@ const years = Object.keys(postsByYear).sort(
 
   {
     years.map((year) => (
-      // biome-ignore lint/correctness/useJsxKeyInIterable: Astro templates don't use React reconciliation; `key` isn't a supported prop here
       <section id={year} class="flex flex-col gap-4">
         <h2 class="font-semibold">{year}</h2>
 
         <ul class="flex flex-col gap-2">
           {postsByYear[year].map((post) => (
-            // biome-ignore lint/correctness/useJsxKeyInIterable: Astro templates don't use React reconciliation; `key` isn't a supported prop here
             <li>
               <PostCard entry={post} />
             </li>
